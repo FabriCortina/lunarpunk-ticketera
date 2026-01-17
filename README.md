@@ -1,81 +1,48 @@
+# LunarPunk Ticketera Backend
 
-# LunarPunk Ticketera
+Plataforma de gestión de eventos y venta de entradas con estética LunarPunk.
 
-Plataforma de gestión de eventos y venta de entradas con estética LunarPunk, integrando pagos seguros y generación de contenido mediante IA.
+## Deploy to Railway
 
-## Stack Tecnológico
+Este proyecto está configurado para desplegarse automáticamente en [Railway](https://railway.app/).
 
-- **Frontend**: React, Tailwind CSS, Lucide Icons.
-- **Backend**: Node.js, Fastify.
-- **Base de Datos**: PostgreSQL, Knex.js.
-- **Validación**: Zod.
-- **IA**: Google Gemini API (`@google/genai`).
-- **Pagos**: MercadoPago SDK.
-- **Seguridad**: JWT Auth, HMAC-SHA256 para firmas criptográficas de QR.
+### 1. Preparar el repositorio
+Asegúrate de que este código esté en tu cuenta de GitHub.
 
-## Requisitos
+### 2. Crear proyecto en Railway
+1. "New Project" -> "Deploy from GitHub repo".
+2. Selecciona este repositorio.
 
-- Node.js v18+
-- PostgreSQL
-- Cuenta de Google AI Studio (Gemini API)
-- Cuenta de MercadoPago Developers
+### 3. Agregar Base de Datos
+1. En el lienzo de Railway, clic derecho -> "New Service" -> "Database" -> "PostgreSQL".
+2. Railway inyectará automáticamente la variable `DATABASE_URL` en tu servicio de Node.js cuando los conectes o si están en el mismo entorno.
 
-## Variables de Entorno
+### 4. Configurar Variables de Entorno
+Ve a la pestaña "Variables" de tu servicio de Node.js y agrega:
 
-Crear un archivo `.env` en la raíz del proyecto basándose en `src/config/env.ts`:
+- `JWT_SECRET`: (Generar uno seguro)
+- `QR_SECRET`: (Generar uno seguro)
+- `MP_ACCESS_TOKEN`: (Tu token de MercadoPago)
+- `API_KEY`: (Tu clave de Gemini AI)
+- `PUBLIC_BASE_URL`: El dominio que Railway te asigne (ej. `https://xxx.up.railway.app`).
+- `ALLOWED_ORIGINS`: La URL de tu frontend (ej. `https://mi-app.vercel.app`).
+- `NODE_ENV`: `production`
 
-```env
-# Servidor
-PORT=3000
-NODE_ENV=development
-LOG_LEVEL=info
-PUBLIC_BASE_URL=http://localhost:3000
+### 5. Build & Start Command
+Railway detectará `package.json`.
+- **Build Command**: `npm run build` (Detectado automáticamente).
+- **Start Command**: `npm run deploy` (Esto ejecutará las migraciones de la base de datos y luego iniciará el servidor).
 
-# Base de Datos
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=lunarpunk_db
-
-# Seguridad
-JWT_SECRET=tu_secreto_super_seguro_min_10_chars
-QR_SECRET=tu_secreto_para_firmar_qrs_min_10_chars
-
-# Servicios Externos
-MP_ACCESS_TOKEN=tu_access_token_mercadopago
-API_KEY=tu_api_key_google_gemini
-```
-
-## Comandos Básicos
-
-### Instalación
+## Desarrollo Local
 
 ```bash
+# Instalar
 npm install
-```
 
-### Desarrollo
-
-Inicia el servidor en modo desarrollo:
-
-```bash
-npm run dev
-```
-
-### Base de Datos
-
-Ejecutar migraciones (si aplica script de Knex):
-
-```bash
+# Base de datos local
+# Asegúrate de tener Postgres corriendo y crear la BD 'lunarpunk_db'
 npm run migrate
-```
 
-### Producción
-
-Compilar TypeScript y ejecutar servidor optimizado:
-
-```bash
-npm run build
-npm start
+# Correr
+npm run dev
 ```

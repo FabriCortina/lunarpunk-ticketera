@@ -1,15 +1,17 @@
-
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
+import process from 'node:process';
 import { env } from './config/env';
 import { userRoutes } from './routes/user.routes';
 import { authRoutes } from './routes/auth.routes';
 import { eventRoutes } from './routes/event.routes';
 import { ticketRoutes } from './routes/ticket.routes';
 import { paymentRoutes } from './routes/payment.routes';
-import { webhookRoutes } from './routes/webhook.routes'; // Import webhook routes
+import { webhookRoutes } from './routes/webhook.routes';
 import { AppError } from './utils/errors';
 import { ZodError } from 'zod';
+import db from './database/connection';
 
 const app = Fastify({
   logger: {
@@ -20,11 +22,25 @@ const app = Fastify({
   },
 });
 
+// Setup CORS
+app.register(cors, {
+  origin: env.ALLOWED_ORIGINS === '*' ? '*' : env.ALLOWED_ORIGINS.split(','),
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+});
+
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);
 
-app.get('/health', async () => {
-  return { status: 'ok', uptime: (process as any).uptime() };
+// Enhanced Health Check
+app.get('/health', async (req, reply) => {
+  try {
+    // Ping DB
+    await db.raw('SELECT 1');
+    return { status: 'ok', db: 'connected', uptime: process.uptime() };
+  } catch (error) {
+    req.log.error(error, 'Health check failed');
+    return reply.status(503).send({ status: 'error', db: 'disconnected' });
+  }
 });
 
 // Register Routes
@@ -33,7 +49,7 @@ app.register(userRoutes, { prefix: '/api/users' });
 app.register(eventRoutes, { prefix: '/api/events' });
 app.register(ticketRoutes, { prefix: '/api/tickets' });
 app.register(paymentRoutes, { prefix: '/api/payments' });
-app.register(webhookRoutes, { prefix: '/webhooks' }); // Register public webhooks
+app.register(webhookRoutes, { prefix: '/webhooks' });
 
 app.setErrorHandler((error, request, reply) => {
   if (error instanceof ZodError) {
@@ -62,11 +78,12 @@ app.setErrorHandler((error, request, reply) => {
 
 const start = async () => {
   try {
+    // Railway requires binding to 0.0.0.0
     await app.listen({ port: env.PORT, host: '0.0.0.0' });
-    console.log(`🚀 Server running at http://localhost:${env.PORT}`);
+    console.log(`🚀 Server running at http://0.0.0.0:${env.PORT}`);
   } catch (err) {
     app.log.error(err);
-    (process as any).exit(1);
+    process.exit(1);
   }
 };
 
