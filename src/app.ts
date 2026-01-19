@@ -78,7 +78,7 @@ app.setErrorHandler((error, request, reply) => {
 
 const start = async () => {
   try {
-    // Railway requires binding to 0.0.0.0
+    // Railway requires binding to 0.0.0.0 to expose the port outside the container
     await app.listen({ port: env.PORT, host: '0.0.0.0' });
     console.log(`🚀 Server running at http://0.0.0.0:${env.PORT}`);
   } catch (err) {
