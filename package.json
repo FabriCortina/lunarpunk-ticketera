@@ -1,14 +1,18 @@
 {
-  "name": "lunarpunk-ticketera-backend",
+  "name": "lunarpunk-ticketera",
   "version": "1.0.0",
-  "description": "Backend para LunarPunk Ticketera",
+  "description": "LunarPunk Ticketera Full Stack",
   "main": "dist/src/app.js",
   "scripts": {
-    "dev": "ts-node src/app.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "dev": "vite",
+    "dev:backend": "ts-node src/app.ts",
+    "build": "tsc -p tsconfig.build.json && vite build",
+    "build:backend": "tsc -p tsconfig.build.json",
+    "build:frontend": "vite build",
     "start": "node dist/src/app.js",
     "migrate": "knex migrate:latest",
-    "deploy": "npm run migrate && npm start"
+    "deploy": "npm run migrate && npm start",
+    "preview": "vite preview --host 0.0.0.0 --port $PORT"
   },
   "keywords": [],
   "author": "",
@@ -16,18 +20,32 @@
   "dependencies": {
     "@fastify/cors": "^9.0.1",
     "@google/genai": "^1.37.0",
+    "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "fastify": "^4.26.2",
     "fastify-type-provider-zod": "^1.1.9",
+    "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
+    "lucide-react": "^0.344.0",
     "mercadopago": "^2.0.8",
     "pg": "^8.11.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.11.24",
     "@types/pg": "^8.11.2",
+    "@types/react": "^18.2.56",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.18",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vite": "^5.1.4"
   }
 }
