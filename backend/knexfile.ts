@@ -1,17 +1,15 @@
 import type { Knex } from 'knex';
 import { env } from './src/config/env';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Determinar si estamos ejecutando desde 'dist' (js) o 'src' (ts) para las migraciones
+// Usar process.cwd() para asegurar rutas absolutas correctas tanto en dev como en prod
 const isProduction = env.NODE_ENV === 'production';
 const migrationExt = isProduction ? 'js' : 'ts';
-const migrationDir = isProduction 
-  ? path.join(__dirname, 'dist', 'src', 'database', 'migrations') 
-  : path.join(__dirname, 'src', 'database', 'migrations');
+
+const migrationDir = path.join(
+  process.cwd(), 
+  isProduction ? 'dist/src/database/migrations' : 'src/database/migrations'
+);
 
 const config: Knex.Config = {
   client: 'pg',

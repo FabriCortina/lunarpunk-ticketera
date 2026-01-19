@@ -16,15 +16,19 @@
   "dependencies": {
     "@fastify/cors": "^9.0.1",
     "@google/genai": "^1.37.0",
+    "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "fastify": "^4.26.2",
     "fastify-type-provider-zod": "^1.1.9",
+    "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
     "mercadopago": "^2.0.8",
     "pg": "^8.11.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.11.24",
     "@types/pg": "^8.11.2",
     "ts-node": "^10.9.2",

@@ -56,15 +56,15 @@ app.setErrorHandler((error, request, reply) => {
     return reply.status(400).send({
       statusCode: 400,
       error: 'Bad Request',
-      issues: error.issues,
+      issues: (error as ZodError).issues,
     });
   }
 
   if (error instanceof AppError) {
-    return reply.status(error.statusCode).send({
-      statusCode: error.statusCode,
+    return reply.status((error as AppError).statusCode).send({
+      statusCode: (error as AppError).statusCode,
       error: 'Business Error',
-      message: error.message,
+      message: (error as AppError).message,
     });
   }
 

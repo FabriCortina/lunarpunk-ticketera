@@ -56,15 +56,15 @@ app.setErrorHandler((error, request, reply) => {
     return reply.status(400).send({
       statusCode: 400,
       error: 'Bad Request',
-      issues: error.issues,
+      issues: (error as ZodError).issues,
     });
   }
 
   if (error instanceof AppError) {
-    return reply.status(error.statusCode).send({
-      statusCode: error.statusCode,
+    return reply.status((error as AppError).statusCode).send({
+      statusCode: (error as AppError).statusCode,
       error: 'Business Error',
-      message: error.message,
+      message: (error as AppError).message,
     });
   }
 
@@ -79,7 +79,8 @@ app.setErrorHandler((error, request, reply) => {
 const start = async () => {
   try {
     // Railway requires binding to 0.0.0.0 to expose the port outside the container
-    await app.listen({ port: env.PORT, host: '0.0.0.0' });
+    // Cast port to number explicitly to satisfy TS types
+    await app.listen({ port: Number(env.PORT), host: '0.0.0.0' });
     console.log(`🚀 Server running at http://0.0.0.0:${env.PORT}`);
   } catch (err) {
     app.log.error(err);
