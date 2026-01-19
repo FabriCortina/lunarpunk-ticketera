@@ -5,7 +5,7 @@ import { ReserveTicketInput, ValidateTicketInput } from '../schemas/ticket.schem
 export class TicketController {
   constructor(private ticketService: TicketService) {}
 
-  reserve = async (req: FastifyRequest<{ Body: ReserveTicketInput }>, reply: FastifyReply) => {
+  reserve = async (req: FastifyRequest, reply: FastifyReply) => {
     const { eventId } = req.body as ReserveTicketInput;
     const ticket = await this.ticketService.reserveTicket(req.user!.id, eventId);
     return reply.status(201).send(ticket);
@@ -16,17 +16,19 @@ export class TicketController {
     return reply.status(200).send(tickets);
   };
 
-  getEventTickets = async (req: FastifyRequest<{ Params: { eventId: string } }>, reply: FastifyReply) => {
-    const tickets = await this.ticketService.getEventTicketsForOrganizer(req.user!.id, req.params.eventId);
+  getEventTickets = async (req: FastifyRequest, reply: FastifyReply) => {
+    const { eventId } = req.params as { eventId: string };
+    const tickets = await this.ticketService.getEventTicketsForOrganizer(req.user!.id, eventId);
     return reply.status(200).send(tickets);
   };
 
-  getQr = async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-    const qrData = await this.ticketService.getTicketQr(req.user!.id, req.params.id);
+  getQr = async (req: FastifyRequest, reply: FastifyReply) => {
+    const { id } = req.params as { id: string };
+    const qrData = await this.ticketService.getTicketQr(req.user!.id, id);
     return reply.status(200).send(qrData);
   };
 
-  validate = async (req: FastifyRequest<{ Body: ValidateTicketInput }>, reply: FastifyReply) => {
+  validate = async (req: FastifyRequest, reply: FastifyReply) => {
     const { qrPayload } = req.body as ValidateTicketInput;
     const result = await this.ticketService.validateTicket(req.user!.id, qrPayload);
     // Devolvemos 200 aunque el ticket sea inválido (lógica de negocio), 
