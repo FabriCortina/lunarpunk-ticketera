@@ -6,9 +6,10 @@ import { CreateEventInput, UpdateEventInput } from '../schemas/event.schema';
 export class EventController {
   constructor(private eventService: EventService) {}
 
-  create = async (req: FastifyRequest<{ Body: CreateEventInput }>, reply: FastifyReply) => {
+  create = async (req: FastifyRequest, reply: FastifyReply) => {
     // req.user is guaranteed by 'authenticate' middleware
-    const event = await this.eventService.createEvent(req.user!.id, req.body);
+    const body = req.body as CreateEventInput;
+    const event = await this.eventService.createEvent(req.user!.id, body);
     return reply.status(201).send(event);
   };
 
@@ -22,18 +23,22 @@ export class EventController {
     return reply.status(200).send(events);
   };
 
-  update = async (req: FastifyRequest<{ Params: { id: string }, Body: UpdateEventInput }>, reply: FastifyReply) => {
-    const event = await this.eventService.updateEvent(req.params.id, req.user!.id, req.body);
+  update = async (req: FastifyRequest, reply: FastifyReply) => {
+    const params = req.params as { id: string };
+    const body = req.body as UpdateEventInput;
+    const event = await this.eventService.updateEvent(params.id, req.user!.id, body);
     return reply.status(200).send(event);
   };
 
-  togglePublish = async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-    const event = await this.eventService.togglePublish(req.params.id, req.user!.id);
+  togglePublish = async (req: FastifyRequest, reply: FastifyReply) => {
+    const params = req.params as { id: string };
+    const event = await this.eventService.togglePublish(params.id, req.user!.id);
     return reply.status(200).send(event);
   };
 
-  delete = async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-    await this.eventService.deleteEvent(req.params.id, req.user!.id);
+  delete = async (req: FastifyRequest, reply: FastifyReply) => {
+    const params = req.params as { id: string };
+    await this.eventService.deleteEvent(params.id, req.user!.id);
     return reply.status(204).send();
   };
 }
