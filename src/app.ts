@@ -1,6 +1,9 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
+import fs from 'node:fs';
+import path from 'node:path';
 import process from 'node:process';
 import { env } from './config/env';
 import { userRoutes } from './routes/user.routes';
@@ -50,6 +53,26 @@ app.register(eventRoutes, { prefix: '/api/events' });
 app.register(ticketRoutes, { prefix: '/api/tickets' });
 app.register(paymentRoutes, { prefix: '/api/payments' });
 app.register(webhookRoutes, { prefix: '/webhooks' });
+
+// Serve frontend build on Railway (single service)
+const clientDistPath = path.join(process.cwd(), 'dist/client');
+if (env.NODE_ENV === 'production' && fs.existsSync(clientDistPath)) {
+  app.register(fastifyStatic, {
+    root: clientDistPath,
+  });
+
+  app.setNotFoundHandler((request, reply) => {
+    if (request.url.startsWith('/api') || request.url.startsWith('/webhooks')) {
+      return reply.status(404).send({
+        statusCode: 404,
+        error: 'Not Found',
+        message: 'Route not found',
+      });
+    }
+
+    return reply.sendFile('index.html');
+  });
+}
 
 app.setErrorHandler((error, request, reply) => {
   if (error instanceof ZodError) {

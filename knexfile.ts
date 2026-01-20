@@ -1,10 +1,6 @@
 import type { Knex } from 'knex';
 import { env } from './src/config/env';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Determinar si estamos ejecutando desde 'dist' (js) o 'src' (ts) para las migraciones
 const isProduction = env.NODE_ENV === 'production';
