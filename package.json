@@ -1,18 +1,29 @@
 {
   "name": "lunarpunk-ticketera-backend",
   "version": "1.0.0",
+<<<<<<< Updated upstream
   "description": "Backend para LunarPunk Ticketera",
   "main": "dist/src/app.js",
+=======
+  "description": "LunarPunk Ticketera Full Stack",
+  "main": "backend/dist/src/app.js",
+>>>>>>> Stashed changes
   "scripts": {
-    "dev": "ts-node src/app.ts",
-    "dev:frontend": "vite",
-    "build:backend": "tsc -p tsconfig.build.json",
-    "build:frontend": "vite build",
+    "dev": "npm --prefix frontend run dev",
+    "dev:backend": "ts-node backend/src/app.ts",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:backend": "tsc -p backend/tsconfig.build.json",
+    "build:frontend": "npm --prefix frontend run build",
     "build": "npm run build:backend && npm run build:frontend",
-    "start": "node dist/src/app.js",
-    "preview:frontend": "vite preview",
+    "start": "node backend/dist/src/app.js",
+    "preview:frontend": "npm --prefix frontend run preview",
     "migrate": "knex migrate:latest",
+<<<<<<< Updated upstream
     "deploy": "npm run migrate && npm start"
+=======
+    "deploy": "npm run migrate && npm start",
+    "preview": "npm --prefix frontend run preview"
+>>>>>>> Stashed changes
   },
   "keywords": [],
   "author": "",

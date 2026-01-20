@@ -1,0 +1,38 @@
+import { get, post } from '../lib/api';
+import { Ticket } from '../types';
+
+export const ticketsService = {
+  reserveTicket: async (eventId: string): Promise<Ticket> => {
+    const ticket = await post<any>('/api/tickets/reserve', { eventId });
+    return mapTicket(ticket);
+  },
+
+  getMyTickets: async (): Promise<Ticket[]> => {
+    const tickets = await get<any[]>('/api/tickets/mine');
+    return tickets.map(mapTicket);
+  },
+
+  getTicketById: async (ticketId: string): Promise<Ticket> => {
+    const ticket = await get<any>(`/api/tickets/${ticketId}`);
+    return mapTicket(ticket);
+  },
+
+  getTicketQr: async (ticketId: string): Promise<{ qrPayload: string | null }> =>
+    get(`/api/tickets/${ticketId}/qr`),
+
+  getEventTickets: async (eventId: string) =>
+    get(`/api/tickets/event/${eventId}`),
+
+  validateTicket: async (qrPayload: string) =>
+    post('/api/tickets/validate', { qrPayload })
+};
+
+const mapTicket = (ticket: any): Ticket => ({
+  id: ticket.id,
+  eventId: ticket.event_id,
+  explorerId: ticket.explorer_id,
+  status: ticket.status,
+  createdAt: ticket.created_at,
+  qrPayload: ticket.qr_payload ?? null,
+  ticketCode: ticket.id
+});

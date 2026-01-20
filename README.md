@@ -230,22 +230,20 @@ ALLOWED_ORIGINS=*
 
 ### Desarrollo
 
-#### Iniciar Backend y Frontend (juntos)
+#### Iniciar Frontend
 
 ```bash
 npm run dev
 ```
 
-Esto iniciará:
-- Backend en `http://localhost:3100`
-- Frontend en `http://localhost:3000`
+Esto iniciará el frontend en `http://localhost:3000`
 
 #### Solo Backend
 
 ```bash
 npm run dev
 # O específicamente:
-ts-node src/app.ts
+npm run dev:backend
 ```
 
 #### Solo Frontend
@@ -372,9 +370,16 @@ lunarpunk-ticketera/
 - `DELETE /api/events/:id` - Eliminar evento (requiere auth, owner)
 
 #### Tickets
-- `GET /api/tickets` - Listar tickets del usuario (requiere auth)
-- `POST /api/tickets` - Crear ticket (requiere auth, EXPLORER)
-- `GET /api/tickets/:id` - Obtener ticket específico (requiere auth, owner)
+- `POST /api/tickets/reserve` - Reservar ticket (requiere auth, EXPLORER)
+- `GET /api/tickets/mine` - Listar tickets del usuario (requiere auth, EXPLORER)
+- `GET /api/tickets/:id` - Obtener ticket específico (requiere auth, EXPLORER, owner)
+- `GET /api/tickets/:id/qr` - Obtener QR de ticket (requiere auth, EXPLORER, owner, PAID)
+- `GET /api/tickets/event/:eventId` - Listar tickets de evento (requiere auth, ORGANIZER, owner del evento)
+- `POST /api/tickets/validate` - Validar ticket por QR (requiere auth, ORGANIZER)
+
+**Detalle `GET /api/tickets/:id`**
+- Devuelve el ticket solo si pertenece al usuario autenticado; si no, responde `403`.
+- Incluye `status` y `qrPayload` (puede ser `null` si aún no está pagado).
 
 #### Pagos
 - `POST /api/payments/preference` - Crear preferencia de pago MercadoPago
@@ -443,13 +448,14 @@ Este proyecto está optimizado para desplegarse en [Railway](https://railway.app
    - Railway inyectará automáticamente `DATABASE_URL`
 
 4. **Configurar Variables de Entorno**
-   Ve a la pestaña "Variables" y agrega:
+   Ve a la pestaña "Variables" y agrega (usa las URLs públicas en Railway, con `https`):
    ```env
    JWT_SECRET=tu_secreto_seguro
    QR_SECRET=tu_secreto_qr_seguro
    MP_ACCESS_TOKEN=tu_token_mercadopago
    API_KEY=tu_clave_gemini
-   PUBLIC_BASE_URL=https://tu-app.up.railway.app
+   BACKEND_PUBLIC_BASE_URL=https://tu-backend.up.railway.app
+   FRONTEND_PUBLIC_BASE_URL=https://tu-frontend.up.railway.app
    ALLOWED_ORIGINS=https://tu-app.up.railway.app
    NODE_ENV=production
    ```
@@ -461,7 +467,7 @@ Este proyecto está optimizado para desplegarse en [Railway](https://railway.app
 
 6. **Configurar Webhook de MercadoPago**
    - En tu cuenta de MercadoPago, configura el webhook:
-   - URL: `https://tu-app.up.railway.app/webhooks/mercadopago`
+   - URL: `${BACKEND_PUBLIC_BASE_URL}/webhooks/mercadopago`
 
 ### Otros Proveedores
 

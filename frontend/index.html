@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LunarPunk Ticketera</title>
+    <link rel="icon" type="image/png" href="/brand/lunarpunk-logo-icon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Import Montserrat from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+    
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              title: ['Xystema', 'Impact', 'sans-serif'],
+              body: ['Montserrat', 'system-ui', 'sans-serif'],
+            },
+            colors: {
+              lp: {
+                bg: 'var(--lp-bg)',
+                surface: 'var(--lp-surface)',
+                border: 'var(--lp-border)',
+                text: 'var(--lp-text)',
+                muted: 'var(--lp-muted)',
+                
+                // Roles
+                primary: 'var(--lp-primary)', // #7435ED (Purple)
+                accent: 'var(--lp-accent)',   // #10FFBB (Mint)
+                
+                // States (Official Palette Mapping)
+                success: 'var(--lp-success)', // Mint
+                warning: 'var(--lp-warning)', // Lime
+                error: 'var(--lp-error)',     // Orange
+
+                // Secondaries
+                navy: 'var(--lp-navy)',
+                blue: 'var(--lp-blue)',
+                cyan: 'var(--lp-cyan)',
+                lime: 'var(--lp-lime)',
+                orange: 'var(--lp-orange)',
+              }
+            },
+            backgroundImage: {
+              'lp-grad-primary': 'var(--lp-grad-primary)',
+              'lp-grad-purple': 'var(--lp-grad-purple)',
+              'lp-grad-mint': 'var(--lp-grad-mint)',
+              'lp-grad-aurora': 'var(--lp-grad-aurora)',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* --- LUNAR PUNK DESIGN SYSTEM OFFICIAL TOKENS --- */
+      
+      /* Typography Setup */
+      @font-face {
+        font-family: "Xystema";
+        src: url("/fonts/Xystema.ttf") format("truetype");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: "Xystema";
+        src: url("/fonts/Xystema.ttf") format("truetype");
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: "Xystema";
+        src: url("/fonts/Xystema.ttf") format("truetype");
+        font-weight: 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      /* Forced Title Class */
+      .lp-title { 
+        font-family: "Xystema", system-ui, Arial !important; 
+      }
+
+      :root {
+        /* FONT TOKENS */
+        --font-title: "Xystema", Impact, sans-serif;
+        --font-body: "Montserrat", system-ui, sans-serif;
+
+        /* OFFICIAL PALETTE HEX CODES */
+        --lp-primary-1: #7435ED; /* Purple */
+        --lp-primary-2: #10FFBB; /* Mint */
+        
+        --lp-navy:   #0F0149;
+        --lp-blue:   #0039D8;
+        --lp-cyan:   #04EAF9;
+        --lp-lime:   #DAFF02;
+        --lp-orange: #FF5E2C;
+
+        /* GLOBAL TOKENS */
+        --lp-bg: #0F0149; /* lp-navy as base background */
+        --lp-surface: rgba(255,255,255,0.06);
+        --lp-border: rgba(255,255,255,0.12);
+        --lp-text: #FFFFFF;
+        --lp-muted: rgba(255,255,255,0.72);
+
+        --lp-primary: var(--lp-primary-1);
+        --lp-accent: var(--lp-primary-2);
+
+        /* STATUS TOKENS */
+        --lp-success: var(--lp-primary-2); /* Mint for Success */
+        --lp-warning: var(--lp-lime);      /* Lime for Warning */
+        --lp-error: var(--lp-orange);      /* Orange for Error */
+
+        /* OFFICIAL GRADIENTS */
+        --lp-grad-purple: linear-gradient(180deg, #7435ED 0%, #0F0149 100%);
+        --lp-grad-mint:   linear-gradient(180deg, #10FFBB 0%, #0F0149 100%);
+        --lp-grad-aurora: linear-gradient(135deg, #7435ED 0%, #0039D8 35%, #04EAF9 70%, #10FFBB 100%);
+        
+        /* PRIMARY BUTTON GRADIENT (Mapped to Aurora as per branding preference for main actions) */
+        --lp-grad-primary: var(--lp-grad-aurora);
+      }
+
+      body {
+        background-color: var(--lp-bg);
+        color: var(--lp-text);
+        font-family: var(--font-body);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Typographic Rules - Base Layer Override */
+      h1, h2, h3, h4, h5, h6 {
+        font-family: var(--font-title);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+
+      /* UI Components Base */
+      .glass-panel {
+        background: var(--lp-surface);
+        border: 1px solid var(--lp-border);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      /* Utilities */
+      .bg-lp-grad-primary { background: var(--lp-grad-primary); }
+      .bg-lp-grad-aurora { background: var(--lp-grad-aurora); }
+      .bg-lp-grad-purple { background: var(--lp-grad-purple); }
+      .bg-lp-grad-mint { background: var(--lp-grad-mint); }
+      
+      .text-gradient-lp {
+        background: var(--lp-grad-aurora);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--lp-bg); 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.2); 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--lp-primary); 
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "zod": "https://esm.sh/zod@^4.3.5",
+    "knex": "https://esm.sh/knex@^3.1.0",
+    "fastify": "https://esm.sh/fastify@^5.7.1",
+    "fastify-type-provider-zod": "https://esm.sh/fastify-type-provider-zod@^6.1.0",
+    "crypto": "https://esm.sh/crypto@^1.0.1",
+    "dotenv/": "https://esm.sh/dotenv@^17.2.3/",
+    "mercadopago": "https://esm.sh/mercadopago@^2.12.0",
+    "buffer": "https://esm.sh/buffer@^6.0.3",
+    "url": "https://esm.sh/url@^0.11.4",
+    "path": "https://esm.sh/path@^0.12.7",
+    "@fastify/cors": "https://esm.sh/@fastify/cors@^11.2.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "jsonwebtoken": "https://esm.sh/jsonwebtoken@^9.0.3",
+    "bcryptjs": "https://esm.sh/bcryptjs@^3.0.3"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
