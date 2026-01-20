@@ -10,7 +10,7 @@ export class EventService {
       organizer_id: userId,
       title: data.title,
       description: data.description,
-      datetime: data.datetime,
+      datetime: new Date(data.datetime),
       price: data.price,
       capacity: data.capacity,
       location: data.location,
