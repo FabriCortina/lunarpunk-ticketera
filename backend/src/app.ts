@@ -1,7 +1,10 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import process from 'node:process';
+import path from 'node:path';
+import fs from 'node:fs';
 import { env } from './config/env';
 import { userRoutes } from './routes/user.routes';
 import { authRoutes } from './routes/auth.routes';
@@ -46,6 +49,32 @@ app.register(eventRoutes, { prefix: '/api/events' });
 app.register(ticketRoutes, { prefix: '/api/tickets' });
 app.register(paymentRoutes, { prefix: '/api/payments' });
 app.register(webhookRoutes, { prefix: '/webhooks' });
+
+const frontendDist = path.resolve(process.cwd(), 'frontend', 'dist');
+if (fs.existsSync(frontendDist)) {
+  app.register(fastifyStatic, {
+    root: frontendDist,
+    prefix: '/'
+  });
+}
+
+app.setNotFoundHandler((req, reply) => {
+  if (
+    req.method === 'GET' &&
+    !req.url.startsWith('/api') &&
+    !req.url.startsWith('/webhooks') &&
+    req.url !== '/health' &&
+    fs.existsSync(frontendDist)
+  ) {
+    return reply.sendFile('index.html');
+  }
+
+  return reply.status(404).send({
+    statusCode: 404,
+    error: 'Not Found',
+    message: 'Route not found'
+  });
+});
 
 app.setErrorHandler((error, request, reply) => {
   if (error instanceof ZodError) {
