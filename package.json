@@ -8,7 +8,7 @@
     "dev:backend": "ts-node backend/src/app.ts",
     "dev:frontend": "npm --prefix frontend run dev",
     "build:backend": "tsc -p backend/tsconfig.build.json",
-    "build:frontend": "npm --prefix frontend run build",
+    "build:frontend": "npm --prefix frontend ci && npm --prefix frontend run build",
     "build": "npm run build:backend && npm run build:frontend",
     "start": "node backend/dist/src/app.js",
     "preview:frontend": "npm --prefix frontend run preview",
