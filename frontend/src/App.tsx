@@ -103,6 +103,9 @@ const App: React.FC = () => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 3000);
       return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
   useEffect(() => {
     const loadData = async () => {
       if (!user) {
@@ -361,7 +364,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-lp-bg font-body text-lp-text selection:bg-lp-accent selection:text-lp-navy cursor-none">
-      
       <MoonCursor />
 
       {/* Header - Surface color with Accent Strip */}
