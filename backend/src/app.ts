@@ -50,10 +50,17 @@ app.register(ticketRoutes, { prefix: '/api/tickets' });
 app.register(paymentRoutes, { prefix: '/api/payments' });
 app.register(webhookRoutes, { prefix: '/webhooks' });
 
+const frontendDistClient = path.resolve(process.cwd(), 'frontend', 'dist', 'client');
 const frontendDist = path.resolve(process.cwd(), 'frontend', 'dist');
-if (fs.existsSync(frontendDist)) {
+const frontendRoot = fs.existsSync(frontendDistClient)
+  ? frontendDistClient
+  : fs.existsSync(frontendDist)
+    ? frontendDist
+    : null;
+
+if (frontendRoot) {
   app.register(fastifyStatic, {
-    root: frontendDist,
+    root: frontendRoot,
     prefix: '/'
   });
 }
@@ -64,7 +71,7 @@ app.setNotFoundHandler((req, reply) => {
     !req.url.startsWith('/api') &&
     !req.url.startsWith('/webhooks') &&
     req.url !== '/health' &&
-    fs.existsSync(frontendDist)
+    frontendRoot
   ) {
     return reply.sendFile('index.html');
   }
