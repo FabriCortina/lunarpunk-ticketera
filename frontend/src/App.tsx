@@ -10,6 +10,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { Button } from './components/Button';
 import { BrandLogo } from './components/BrandLogo';
 import { MoonCursor } from './components/MoonCursor';
+import { Moon } from './components/Moon';
 import { authService } from './services/authService';
 import { eventsService } from './services/eventsService';
 import { ticketsService } from './services/ticketsService';
@@ -391,6 +392,10 @@ const App: React.FC = () => {
             }`}>
               {user.role === UserRole.ORGANIZER ? <ShieldCheck size={14} /> : <Map size={14} />}
               {user.role === UserRole.ORGANIZER ? 'ORGANIZER' : 'EXPLORER'}
+            </div>
+
+            <div className="hidden sm:flex items-center">
+              <Moon size={64} />
             </div>
 
             <div className="h-8 w-px bg-lp-border hidden md:block"></div>
