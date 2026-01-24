@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Ticket, Event, TicketStatus } from '../types';
-import { Button } from './Button';
 import { BrandLogo } from './BrandLogo';
+import { ticketsService } from '../services/ticketsService';
 import { QrCode, X, CheckCircle, Clock, Ban, CheckCheck, AlertCircle, AlertTriangle, Hourglass, Lock } from 'lucide-react';
 
 interface TicketWalletProps {
@@ -16,6 +16,7 @@ const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
 export const TicketWallet: React.FC<TicketWalletProps> = ({ tickets, events, onClose, userId }) => {
   const [now, setNow] = useState(Date.now());
+  const [qrPayloads, setQrPayloads] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -23,6 +24,37 @@ export const TicketWallet: React.FC<TicketWalletProps> = ({ tickets, events, onC
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadQrPayloads = async () => {
+      const paidTickets = tickets.filter(ticket => ticket.status === TicketStatus.PAID);
+
+      await Promise.all(
+        paidTickets.map(async (ticket) => {
+          if (ticket.qrPayload || Object.prototype.hasOwnProperty.call(qrPayloads, ticket.id)) {
+            return;
+          }
+
+          try {
+            const result = await ticketsService.getTicketQr(ticket.id);
+            if (!isActive) return;
+            setQrPayloads(prev => ({ ...prev, [ticket.id]: result.qrPayload }));
+          } catch (error) {
+            if (!isActive) return;
+            setQrPayloads(prev => ({ ...prev, [ticket.id]: null }));
+          }
+        })
+      );
+    };
+
+    loadQrPayloads();
+
+    return () => {
+      isActive = false;
+    };
+  }, [tickets, qrPayloads]);
   
   const getEvent = (id: string) => events.find(e => e.id === id);
   
@@ -168,7 +200,18 @@ export const TicketWallet: React.FC<TicketWalletProps> = ({ tickets, events, onC
                      {/* QR Logic */}
                     {ticket.status === TicketStatus.PAID ? (
                          <div className="bg-white p-1.5 rounded shadow-[0_0_10px_rgba(255,255,255,0.5)]">
-                            <QrCode className="text-black" size={40} />
+                            {(() => {
+                              const payload = ticket.qrPayload ?? qrPayloads[ticket.id] ?? null;
+                              const qrUrl = payload
+                                ? `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(payload)}`
+                                : null;
+
+                              return qrUrl ? (
+                                <img src={qrUrl} alt="QR Ticket" className="w-10 h-10" />
+                              ) : (
+                                <QrCode className="text-black" size={40} />
+                              );
+                            })()}
                          </div>
                     ) : (
                          <div className="p-2 rounded bg-slate-800 border border-slate-600 flex items-center justify-center w-[52px] h-[52px]">
@@ -181,7 +224,7 @@ export const TicketWallet: React.FC<TicketWalletProps> = ({ tickets, events, onC
                   
                   <div className="border-t border-white/5 my-3 pt-3 flex justify-between items-center relative z-10 font-body">
                      {renderStatus(ticket)}
-                    <span className="text-[10px] text-slate-500 font-mono tracking-wider">{ticket.ticketCode || ticket.id}</span>
+                     <span className="text-[10px] text-slate-500 font-mono tracking-wider">{ticket.ticketCode || ticket.id}</span>
                   </div>
 
                   {isWarning && (

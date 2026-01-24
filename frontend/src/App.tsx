@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole, Event, Ticket, TicketStatus, User } from './types';
 import { OrganizerPanel } from './components/OrganizerPanel';
 import { OrganizerEventList } from './components/OrganizerEventList';
@@ -9,12 +9,12 @@ import { ProfileModal } from './components/ProfileModal';
 import { AuthScreen } from './components/AuthScreen';
 import { Button } from './components/Button';
 import { BrandLogo } from './components/BrandLogo';
-import { MoonCursor } from './components/MoonCursor';
 import { Moon } from './components/Moon';
+import { MoonCursor } from './components/MoonCursor';
 import { authService } from './services/authService';
 import { eventsService } from './services/eventsService';
 import { ticketsService } from './services/ticketsService';
-import { Ticket as TicketIcon, Map, Database, ShieldCheck, LogOut, AlertTriangle, Sparkles, User as UserIcon } from 'lucide-react';
+import { Ticket as TicketIcon, Sparkles, LogOut, ShieldCheck, Map, Database, AlertTriangle, User as UserIcon } from 'lucide-react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -22,16 +22,16 @@ const App: React.FC = () => {
   
   const [events, setEvents] = useState<Event[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [isDataLoading, setIsDataLoading] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [showWallet, setShowWallet] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'failure' | 'pending' | null>(null);
-  const [paymentBanner, setPaymentBanner] = useState<{ status: 'success' | 'failure' | 'pending'; message: string } | null>(null);
+  const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
   
   const [explorerView, setExplorerView] = useState<'events' | 'tickets'>('events');
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const paymentPollingStartedRef = useRef(false);
-  const paymentInitialPaidIdsRef = useRef<Set<string>>(new Set());
 
   // --- SECURITY / AUTHORIZATION LAYER ---
 
@@ -75,125 +75,109 @@ const App: React.FC = () => {
   // --- END SECURITY LAYER ---
 
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
+    const loadSession = async () => {
+      const currentUser = await authService.refreshSession();
       setUser(currentUser);
-    }
-    setIsAuthLoading(false);
+      setIsAuthLoading(false);
+    };
+
+    loadSession();
   }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get('status');
-
     if (status === 'success' || status === 'failure' || status === 'pending') {
       setPaymentStatus(status);
-      setPaymentBanner({
-        status,
-        message:
-          status === 'success'
-            ? 'Pago en proceso...'
-            : status === 'failure'
-            ? 'El pago falló. Intentá nuevamente.'
-            : 'Pago pendiente. Esperando confirmación.'
-      });
+      setPaymentMessage(
+        status === 'success'
+          ? 'Procesando tu pago...'
+          : status === 'failure'
+            ? 'El pago no se pudo completar.'
+            : 'Tu pago está pendiente.'
+      );
     }
   }, []);
-
-  useEffect(() => {
-    const loadEvents = async () => {
-      try {
-        const publishedEvents = await eventsService.getPublished();
-        setEvents(publishedEvents);
-      } catch (error: any) {
-        setNotification(error.message || 'Error al cargar eventos.');
-      }
-    };
-
-    loadEvents();
-  }, []);
-
-  useEffect(() => {
-    const loadTickets = async () => {
-      if (!user || user.role !== UserRole.EXPLORER) {
-        setTickets([]);
-        return;
-      }
-
-      try {
-        const myTickets = await ticketsService.getMyTickets();
-        setTickets(myTickets);
-      } catch (error: any) {
-        setNotification(error.message || 'Error al cargar tickets.');
-      }
-    };
-
-    loadTickets();
-  }, [user]);
-
-  useEffect(() => {
-    if (paymentStatus !== 'success') {
-      return;
-    }
-
-    if (!user || user.role !== UserRole.EXPLORER) {
-      return;
-    }
-
-    if (paymentPollingStartedRef.current) {
-      return;
-    }
-
-    paymentPollingStartedRef.current = true;
-    paymentInitialPaidIdsRef.current = new Set(
-      tickets.filter(ticket => ticket.status === TicketStatus.PAID).map(ticket => ticket.id)
-    );
-
-    let isActive = true;
-
-    const poll = async () => {
-      try {
-        const myTickets = await ticketsService.getMyTickets();
-        if (!isActive) {
-          return;
-        }
-
-        setTickets(myTickets);
-        const hasNewPaid = myTickets.some(
-          ticket => ticket.status === TicketStatus.PAID && !paymentInitialPaidIdsRef.current.has(ticket.id)
-        );
-
-        if (hasNewPaid) {
-          setPaymentBanner({ status: 'success', message: 'Pago confirmado' });
-          stopPolling();
-        }
-      } catch (error: any) {
-        console.error('Error polling tickets:', error);
-      }
-    };
-
-    const intervalId = window.setInterval(poll, 2000);
-    const timeoutId = window.setTimeout(() => {
-      stopPolling();
-    }, 20000);
-
-    const stopPolling = () => {
-      window.clearInterval(intervalId);
-      window.clearTimeout(timeoutId);
-      isActive = false;
-    };
-
-    poll();
-
-    return () => {
-      stopPolling();
-    };
-  }, [paymentStatus, user, tickets]);
 
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 3000);
       return () => clearTimeout(timer);
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user) {
+        setEvents([]);
+        setTickets([]);
+        return;
+      }
+
+      setIsDataLoading(true);
+      setDataError(null);
+
+      try {
+        if (user.role === UserRole.ORGANIZER) {
+          const organizerEvents = await eventsService.getMine();
+          setEvents(organizerEvents);
+          setTickets([]);
+        } else {
+          const [publishedEvents, myTickets] = await Promise.all([
+            eventsService.getPublished(),
+            ticketsService.getMyTickets()
+          ]);
+          setEvents(publishedEvents);
+          setTickets(myTickets);
+        }
+      } catch (error: any) {
+        setDataError(error?.message || 'No se pudieron cargar los datos.');
+      } finally {
+        setIsDataLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
+
+  useEffect(() => {
+    if (!paymentStatus || paymentStatus !== 'success' || !user || user.role !== UserRole.EXPLORER) {
+      return;
+    }
+
+    let isActive = true;
+    const startTime = Date.now();
+
+    const poll = async () => {
+      if (!isActive) return;
+      try {
+        const latestTickets = await ticketsService.getMyTickets();
+        if (!isActive) return;
+
+        const hasNewPaid = latestTickets.some(t => t.status === TicketStatus.PAID);
+        setTickets(latestTickets);
+
+        if (hasNewPaid) {
+          setPaymentMessage('Pago confirmado.');
+          isActive = false;
+          return;
+        }
+      } catch (error) {
+        // keep silent to avoid noisy UI
+      }
+
+      if (Date.now() - startTime >= 20000) {
+        isActive = false;
+        return;
+      }
+    };
+
+    const interval = setInterval(poll, 2000);
+    poll();
+
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+    };
+  }, [paymentStatus, user]);
+
     }
   }, [notification]);
 
@@ -236,23 +220,23 @@ const App: React.FC = () => {
 
   // --- ORGANIZER ACTIONS (STRICT) ---
 
-  const handleCreateEvent = (eventData: Omit<Event, 'organizerId'>) => {
+  const handleCreateEvent = async (eventData: Omit<Event, 'organizerId'>) => {
     if (!user || user.role !== UserRole.ORGANIZER) {
         setNotification('Error de Seguridad: Permisos insuficientes.');
         return;
     }
     
-    const newEvent: Event = {
-      ...eventData,
-      organizerId: user.id 
-    };
-
-    setEvents([newEvent, ...events]);
-    setNotification('Evento creado exitosamente en la red lunar.');
-    scrollToSection('organizer-events');
+    try {
+      const createdEvent = await eventsService.create(eventData);
+      setEvents([createdEvent, ...events]);
+      setNotification('Evento creado exitosamente en la red lunar.');
+      scrollToSection('organizer-events');
+    } catch (error: any) {
+      setNotification(error?.message || 'No se pudo crear el evento.');
+    }
   };
 
-  const handleUpdateEvent = (updatedEvent: Event) => {
+  const handleUpdateEvent = async (updatedEvent: Event) => {
     if (!user || user.role !== UserRole.ORGANIZER) return;
     
     if (!verifyEventOwnership(user, updatedEvent.id)) {
@@ -260,15 +244,18 @@ const App: React.FC = () => {
        return;
     }
 
-    const safeUpdate = { ...updatedEvent, organizerId: user.id };
-
-    setEvents(events.map(e => e.id === safeUpdate.id ? safeUpdate : e));
-    setEditingEvent(null);
-    setNotification('Evento actualizado correctamente.');
-    scrollToSection('organizer-events');
+    try {
+      const savedEvent = await eventsService.update(updatedEvent.id, updatedEvent);
+      setEvents(events.map(e => e.id === savedEvent.id ? savedEvent : e));
+      setEditingEvent(null);
+      setNotification('Evento actualizado correctamente.');
+      scrollToSection('organizer-events');
+    } catch (error: any) {
+      setNotification(error?.message || 'No se pudo actualizar el evento.');
+    }
   };
 
-  const handleDeleteEvent = (eventId: string) => {
+  const handleDeleteEvent = async (eventId: string) => {
     if (!user || user.role !== UserRole.ORGANIZER) return;
 
     if (!verifyEventOwnership(user, eventId)) {
@@ -277,12 +264,17 @@ const App: React.FC = () => {
     }
 
     if(window.confirm("¿Seguro que quieres eliminar este evento de la red?")) {
-        setEvents(events.filter(e => e.id !== eventId));
-        setNotification('Evento eliminado.');
+        try {
+          await eventsService.remove(eventId);
+          setEvents(events.filter(e => e.id !== eventId));
+          setNotification('Evento eliminado.');
+        } catch (error: any) {
+          setNotification(error?.message || 'No se pudo eliminar el evento.');
+        }
     }
   };
 
-  const handleTogglePublish = (event: Event) => {
+  const handleTogglePublish = async (event: Event) => {
      if (!user || user.role !== UserRole.ORGANIZER) return;
      
      if (!verifyEventOwnership(user, event.id)) {
@@ -290,9 +282,13 @@ const App: React.FC = () => {
         return;
      }
 
-     const updatedEvent = { ...event, isPublished: !event.isPublished };
-     setEvents(events.map(e => e.id === event.id ? updatedEvent : e));
-     setNotification(updatedEvent.isPublished ? 'Evento publicado.' : 'Evento ocultado (Borrador).');
+     try {
+       const updatedEvent = await eventsService.togglePublish(event.id);
+       setEvents(events.map(e => e.id === event.id ? updatedEvent : e));
+       setNotification(updatedEvent.isPublished ? 'Evento publicado.' : 'Evento ocultado (Borrador).');
+     } catch (error: any) {
+       setNotification(error?.message || 'No se pudo actualizar el estado del evento.');
+     }
   };
 
   const handleStartEdit = (event: Event) => {
@@ -317,27 +313,30 @@ const App: React.FC = () => {
         return;
     }
 
-    if (!event.isPublished) {
+    const targetEvent = events.find(e => e.id === event.id);
+    if (!targetEvent || !targetEvent.isPublished) {
         setNotification('Este evento no está disponible.');
         return;
     }
 
-    if (event.availableTickets <= 0) {
-      setNotification('Este evento no tiene tickets disponibles.');
-      return;
-    }
+    if (targetEvent.availableTickets > 0) {
+      try {
+        const newTicket = await ticketsService.reserveTicket(targetEvent.id);
+        setTickets([newTicket, ...tickets]);
+        
+        setEvents(events.map(e => 
+          e.id === targetEvent.id 
+            ? { ...e, availableTickets: Math.max(e.availableTickets - 1, 0) } 
+            : e
+        ));
 
-    try {
-      await ticketsService.reserveTicket(event.id);
-      const myTickets = await ticketsService.getMyTickets();
-      setTickets(myTickets);
-      setNotification(`¡Ticket reservado para ${event.title}! Revisa "Mis Tickets".`);
-      setExplorerView('tickets'); 
-    } catch (error: any) {
-      setNotification(error.message || 'Error al reservar ticket.');
+        setNotification(`¡Ticket reservado para ${targetEvent.title}! Revisa "Mis Tickets".`);
+        setExplorerView('tickets'); 
+      } catch (error: any) {
+        setNotification(error?.message || 'No se pudo reservar el ticket.');
+      }
     }
   };
-
 
   if (isAuthLoading) {
     return (
@@ -394,11 +393,13 @@ const App: React.FC = () => {
               {user.role === UserRole.ORGANIZER ? 'ORGANIZER' : 'EXPLORER'}
             </div>
 
-            <div className="hidden sm:flex items-center">
-              <Moon size={64} />
-            </div>
-
             <div className="h-8 w-px bg-lp-border hidden md:block"></div>
+
+            <div className="hidden md:flex items-center gap-2">
+              <div className="glass-panel p-1.5 rounded-full border border-white/10">
+                <Moon size={34} />
+              </div>
+            </div>
 
             <nav className="flex items-center gap-3">
                 
@@ -478,17 +479,43 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
         <div className="animate-fadeIn">
-          {paymentBanner && (
-            <div
-              className={`mb-6 rounded-lg border px-4 py-3 text-sm font-body ${
-                paymentBanner.status === 'success'
-                  ? 'border-lp-accent/40 bg-lp-accent/10 text-lp-accent'
-                  : paymentBanner.status === 'failure'
-                  ? 'border-lp-error/40 bg-lp-error/10 text-lp-error'
-                  : 'border-lp-warning/40 bg-lp-warning/10 text-lp-warning'
-              }`}
-            >
-              {paymentBanner.message}
+          {paymentStatus && paymentMessage && (
+            <div className="mb-6">
+              <div className={`glass-panel px-5 py-4 rounded-xl border flex items-center gap-3 ${
+                paymentStatus === 'success'
+                  ? 'border-lp-accent/40 bg-lp-accent/5'
+                  : paymentStatus === 'failure'
+                    ? 'border-lp-error/40 bg-lp-error/5'
+                    : 'border-lp-warning/40 bg-lp-warning/5'
+              }`}>
+                <div className={`p-2 rounded-full ${
+                  paymentStatus === 'success'
+                    ? 'bg-lp-accent/20 text-lp-accent'
+                    : paymentStatus === 'failure'
+                      ? 'bg-lp-error/20 text-lp-error'
+                      : 'bg-lp-warning/20 text-lp-warning'
+                }`}>
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <p className="text-sm font-body text-white font-bold uppercase tracking-wider">Estado del pago</p>
+                  <p className="text-xs text-lp-muted font-body">{paymentMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isDataLoading && (
+            <div className="mb-6 text-lp-muted text-sm font-body">
+              Cargando datos...
+            </div>
+          )}
+
+          {dataError && (
+            <div className="mb-6">
+              <div className="glass-panel px-5 py-4 rounded-xl border border-lp-error/40 bg-lp-error/5 text-lp-error text-sm font-body">
+                {dataError}
+              </div>
             </div>
           )}
           

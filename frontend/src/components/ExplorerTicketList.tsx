@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Ticket, Event, TicketStatus } from '../types';
 import { Button } from './Button';
 import { BrandLogo } from './BrandLogo';
-import { Calendar, MapPin, Clock, CheckCircle, Ban, CheckCheck, Ticket as TicketIcon, AlertCircle, RefreshCcw, CreditCard, AlertTriangle, Hourglass } from 'lucide-react';
 import { ticketsService } from '../services/ticketsService';
 import { paymentsService } from '../services/paymentsService';
+import { QrCode, Calendar, MapPin, Clock, CheckCircle, Ban, CheckCheck, Ticket as TicketIcon, AlertCircle, RefreshCcw, CreditCard, AlertTriangle, Hourglass, Lock } from 'lucide-react';
 
 interface ExplorerTicketListProps {
   tickets: Ticket[];
@@ -18,9 +18,9 @@ const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
 export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets, events, userId, onGoToEvents }) => {
   const [now, setNow] = useState(Date.now());
-  const [qrPayloads, setQrPayloads] = useState<Record<string, string>>({});
-  const [loadingTicketId, setLoadingTicketId] = useState<string | null>(null);
-  const [paymentErrors, setPaymentErrors] = useState<Record<string, string>>({});
+  const [qrPayloads, setQrPayloads] = useState<Record<string, string | null>>({});
+  const [checkoutLoadingId, setCheckoutLoadingId] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -30,72 +30,37 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    const paidTickets = tickets.filter(ticket => ticket.status === TicketStatus.PAID);
-    const missingQr = paidTickets.filter(ticket => !qrPayloads[ticket.id]);
-
-    if (missingQr.length === 0) {
-      return () => {
-        isMounted = false;
-      };
-    }
+    let isActive = true;
 
     const loadQrPayloads = async () => {
-      try {
-        const results = await Promise.all(
-          missingQr.map(async ticket => {
-            const { qrPayload } = await ticketsService.getTicketQr(ticket.id);
-            return { id: ticket.id, qrPayload };
-          })
-        );
+      const paidTickets = tickets.filter(ticket => ticket.status === TicketStatus.PAID);
 
-        if (!isMounted) {
-          return;
-        }
+      await Promise.all(
+        paidTickets.map(async (ticket) => {
+          if (ticket.qrPayload || Object.prototype.hasOwnProperty.call(qrPayloads, ticket.id)) {
+            return;
+          }
 
-        setQrPayloads(prev => {
-          const next = { ...prev };
-          results.forEach(result => {
-            if (result.qrPayload) {
-              next[result.id] = result.qrPayload;
-            }
-          });
-          return next;
-        });
-      } catch (error) {
-        console.error('Error loading ticket QR:', error);
-      }
+          try {
+            const result = await ticketsService.getTicketQr(ticket.id);
+            if (!isActive) return;
+            setQrPayloads(prev => ({ ...prev, [ticket.id]: result.qrPayload }));
+          } catch (error) {
+            if (!isActive) return;
+            setQrPayloads(prev => ({ ...prev, [ticket.id]: null }));
+          }
+        })
+      );
     };
 
     loadQrPayloads();
 
     return () => {
-      isMounted = false;
+      isActive = false;
     };
   }, [tickets, qrPayloads]);
 
   const getEvent = (id: string) => events.find(e => e.id === id);
-
-  const handleCompletePayment = async (ticketId: string) => {
-    setLoadingTicketId(ticketId);
-    setPaymentErrors(prev => {
-      const next = { ...prev };
-      delete next[ticketId];
-      return next;
-    });
-
-    try {
-      const { init_point } = await paymentsService.createPreference(ticketId);
-      window.location.href = init_point;
-    } catch (error: any) {
-      setPaymentErrors(prev => ({
-        ...prev,
-        [ticketId]: error?.message || 'Error al iniciar el pago.'
-      }));
-    } finally {
-      setLoadingTicketId(prev => (prev === ticketId ? null : prev));
-    }
-  };
 
   // Helper to calculate status details
   const getTicketStatusInfo = (ticket: Ticket) => {
@@ -218,33 +183,75 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
     }
   };
 
-  const renderQrSection = (ticket: Ticket) => {
-    if (ticket.status !== TicketStatus.PAID) {
-      return null;
+  const getQrPayload = (ticket: Ticket) => ticket.qrPayload ?? qrPayloads[ticket.id] ?? null;
+
+  const renderQrSection = (ticket: Ticket, isExpired: boolean) => {
+    if (isExpired && ticket.status === TicketStatus.PENDING) {
+        return (
+             <div className="flex flex-col items-center gap-2 opacity-50 font-body">
+                 <div className="bg-slate-800 p-2 rounded-lg">
+                    <Ban size={60} className="text-slate-600" />
+                 </div>
+                 <span className="text-[10px] text-slate-500 uppercase tracking-widest text-center">Expirado</span>
+             </div>
+        );
     }
 
-    const qrPayload = qrPayloads[ticket.id];
-    if (!qrPayload) {
-      return (
-        <span className="text-[10px] text-slate-500 uppercase tracking-widest text-center font-body">
-          Cargando QR...
-        </span>
-      );
+    switch(ticket.status) {
+        case TicketStatus.PAID:
+            const qrPayload = getQrPayload(ticket);
+            const qrUrl = qrPayload
+              ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrPayload)}`
+              : null;
+            return (
+                <div className="font-body flex flex-col items-center">
+                 <div className="bg-white p-2 rounded-lg shadow-[0_0_15px_rgba(255,255,255,0.1)] group-hover:shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all">
+                    {qrUrl ? (
+                      <img src={qrUrl} alt="QR Ticket" className="w-20 h-20" />
+                    ) : (
+                      <QrCode size={80} className="text-black" />
+                    )}
+                 </div>
+                 <span className="text-[10px] text-slate-500 uppercase tracking-widest text-center mt-2">
+                   {qrUrl ? 'Presentá este QR en el acceso' : 'Generando QR...'}
+                 </span>
+                </div>
+            );
+        case TicketStatus.PENDING:
+            return (
+                <div className="text-center flex flex-col items-center gap-2 font-body">
+                    <div className="w-20 h-20 rounded-lg border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-800/50">
+                        <Lock size={24} className="text-slate-500" />
+                    </div>
+                    <span className="text-[10px] text-lp-warning font-bold uppercase tracking-wide text-center max-w-[140px]">
+                        Completá el pago para habilitar tu QR
+                    </span>
+                </div>
+            );
+        case TicketStatus.VALIDATED:
+             return (
+                 <div className="text-center flex flex-col items-center gap-2 font-body">
+                    <div className="w-20 h-20 rounded-lg border border-lp-accent/20 flex items-center justify-center bg-lp-accent/5">
+                        <CheckCheck size={32} className="text-lp-accent" />
+                    </div>
+                    <span className="text-[10px] text-lp-accent font-bold uppercase tracking-wide text-center">
+                        Ticket ya utilizado
+                    </span>
+                </div>
+            );
+        case TicketStatus.CANCELED:
+             return (
+                 <div className="text-center flex flex-col items-center gap-2 font-body">
+                    <div className="w-20 h-20 rounded-lg border border-lp-error/20 flex items-center justify-center bg-lp-error/5">
+                        <Ban size={32} className="text-lp-error" />
+                    </div>
+                    <span className="text-[10px] text-lp-error font-bold uppercase tracking-wide text-center">
+                        Ticket cancelado
+                    </span>
+                </div>
+            );
+        default: return null;
     }
-
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(qrPayload)}`;
-    return (
-      <div className="font-body flex flex-col items-center">
-        <img
-          src={qrUrl}
-          alt="QR del ticket"
-          className="w-24 h-24 rounded-lg bg-white p-1 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
-        />
-        <span className="text-[10px] text-slate-500 uppercase tracking-widest text-center mt-2">
-          Presentá este QR en el acceso
-        </span>
-      </div>
-    );
   };
 
   if (sortedTickets.length === 0) {
@@ -299,44 +306,40 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
               )}
 
               {/* Left: Event Image & Date */}
-              <div className="w-full md:w-64 relative min-h-[160px]">
+              <div className="relative w-full md:w-48 h-40 md:h-auto shrink-0 overflow-hidden">
                 <img 
                   src={event.imageUrl} 
                   alt={event.title} 
-                  className={`w-full h-full object-cover transition-transform duration-700 ${isExpired ? 'grayscale' : 'group-hover:scale-105'}`}
+                  className={`w-full h-full object-cover transition-all ${isExpired ? 'grayscale' : ''}`}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent md:bg-gradient-to-r"></div>
-                
-                {/* Overlay Date */}
-                <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur px-3 py-2 rounded text-center border border-white/10 font-body">
-                   <p className="text-lp-accent text-xs font-bold uppercase">{new Date(event.dateTime).toLocaleString('default', { month: 'short' })}</p>
-                   <p className="text-white text-xl font-title font-bold leading-none">{new Date(event.dateTime).getDate()}</p>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                <div className="absolute bottom-3 left-3">
+                  <p className="text-xs text-white font-body uppercase tracking-widest">
+                    {new Date(ticket.createdAt).toLocaleDateString('es-ES')}
+                  </p>
                 </div>
               </div>
 
-              {/* Middle: Ticket Details */}
-              <div className="flex-1 p-6 flex flex-col justify-center border-b md:border-b-0 md:border-r border-white/5 pt-8">
-                <div className="flex justify-between items-start mb-2">
-                   <div>
-                      {/* Event Title -> H3 -> text-2xl */}
-                      <h3 className="text-2xl font-title font-bold text-white group-hover:text-lp-accent transition-colors">{event.title}</h3>
-                      <p className="text-xs text-slate-500 font-mono mt-1">CODE: {ticket.ticketCode}</p>
-                   </div>
-                   {renderStatus(ticket)}
+              {/* Middle: Ticket Info */}
+              <div className="flex-1 p-6 flex flex-col">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-title font-bold text-white leading-tight">{event.title}</h3>
+                    <p className="text-slate-400 text-xs font-body">{event.location}</p>
+                  </div>
+                  {renderStatus(ticket)}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 text-sm text-slate-400 font-body">
-                   <div className="flex items-center gap-2">
-                      <MapPin size={14} className="text-lp-accent" />
-                      <span>{event.location}</span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                      <Calendar size={14} className="text-lp-accent" />
-                      <span>Comprado el: {new Date(ticket.createdAt).toLocaleDateString()}</span>
-                   </div>
+                <div className="space-y-2 text-sm text-slate-400 font-body">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} /> <span>{new Date(event.dateTime).toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin size={14} /> <span>{event.location}</span>
+                  </div>
                 </div>
 
-                {/* Expiration Actions for PENDING */}
+                {/* Pending Actions */}
                 {ticket.status === TicketStatus.PENDING && (
                   <div className="mt-4 pt-4 border-t border-white/5 flex gap-3 flex-col sm:flex-row items-start sm:items-center">
                      {isExpired ? (
@@ -364,25 +367,34 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
                           <Button 
                             variant="primary" 
                             className={`w-full sm:w-auto text-xs !py-2 text-black shadow-none font-body ${isWarning ? 'bg-lp-error hover:bg-red-400' : 'bg-lp-warning hover:bg-yellow-300'}`}
-                            onClick={() => handleCompletePayment(ticket.id)}
-                            disabled={loadingTicketId === ticket.id}
+                            isLoading={checkoutLoadingId === ticket.id}
+                            onClick={async () => {
+                              setCheckoutError(null);
+                              setCheckoutLoadingId(ticket.id);
+                              try {
+                                const response = await paymentsService.createPreference(ticket.id);
+                                window.location.href = response.init_point;
+                              } catch (error: any) {
+                                setCheckoutError(error?.message || 'No se pudo iniciar el pago.');
+                              } finally {
+                                setCheckoutLoadingId(null);
+                              }
+                            }}
                           >
                             <CreditCard size={14} /> Completar Pago
                           </Button>
-                          {paymentErrors[ticket.id] && (
-                            <p className="text-xs text-lp-error mt-2 font-body">
-                              {paymentErrors[ticket.id]}
-                            </p>
-                          )}
                         </>
                      )}
                   </div>
                 )}
+                {checkoutError && (
+                  <p className="mt-2 text-xs text-lp-error font-body">{checkoutError}</p>
+                )}
               </div>
 
-              {/* Right: QR */}
-              <div className="p-6 md:w-48 bg-slate-900/50 flex flex-col items-center justify-center gap-3 border-l border-white/5">
-                 {renderQrSection(ticket)}
+              {/* Right: QR & Action */}
+              <div className={`p-6 md:w-48 bg-slate-900/50 flex flex-col items-center justify-center gap-3 border-l border-white/5 ${isExpired && ticket.status === TicketStatus.PENDING ? 'pointer-events-none' : ''}`}>
+                 {renderQrSection(ticket, isExpired)}
               </div>
             </div>
           );

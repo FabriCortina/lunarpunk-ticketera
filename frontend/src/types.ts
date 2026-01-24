@@ -13,9 +13,9 @@ export interface Event {
   dateTime: string;
   price: number;
   location: string;
-  capacity: number;
-  availableTickets: number;
   imageUrl: string;
+  availableTickets: number;
+  capacity: number;
   isPublished: boolean;
   organizerId: string;
 }

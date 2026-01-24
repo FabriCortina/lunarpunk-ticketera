@@ -29,10 +29,10 @@ export const ticketsService = {
 
 const mapTicket = (ticket: any): Ticket => ({
   id: ticket.id,
-  eventId: ticket.event_id,
-  explorerId: ticket.explorer_id,
+  eventId: ticket.event_id ?? ticket.eventId,
+  explorerId: ticket.explorer_id ?? ticket.explorerId,
   status: ticket.status,
-  createdAt: ticket.created_at,
-  qrPayload: ticket.qr_payload ?? null,
-  ticketCode: ticket.id
+  createdAt: ticket.created_at ?? ticket.createdAt,
+  qrPayload: ticket.qrPayload ?? ticket.qr_payload ?? null,
+  ticketCode: ticket.ticketCode ?? ticket.id
 });

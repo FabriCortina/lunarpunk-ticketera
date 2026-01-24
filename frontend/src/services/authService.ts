@@ -1,7 +1,7 @@
 import { User, UserRole } from '../types';
 import { get, post } from '../lib/api';
 
-const SESSION_KEY = 'lunar_session';
+const USER_KEY = 'user';
 const TOKEN_KEY = 'token';
 
 type AuthResponse = {
@@ -9,49 +9,57 @@ type AuthResponse = {
   token: string;
 };
 
+const storeSession = (payload: AuthResponse) => {
+  localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
+  localStorage.setItem(TOKEN_KEY, payload.token);
+};
+
+const clearSession = () => {
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+};
+
 export const authService = {
   register: async (name: string, email: string, password: string, role: UserRole): Promise<User> => {
-    const { user, token } = await post<AuthResponse>('/api/auth/register', {
-      name,
-      email,
-      password,
-      role
-    });
-
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-    return user;
+    const response = await post<AuthResponse>('/api/auth/register', { name, email, password, role });
+    storeSession(response);
+    return response.user;
   },
 
   login: async (email: string, password: string): Promise<User> => {
-    const { user, token } = await post<AuthResponse>('/api/auth/login', {
-      email,
-      password
-    });
-
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-    return user;
+    const response = await post<AuthResponse>('/api/auth/login', { email, password });
+    storeSession(response);
+    return response.user;
   },
 
   logout: async () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(SESSION_KEY);
+    clearSession();
   },
 
   getCurrentUser: (): User | null => {
-    const session = localStorage.getItem(SESSION_KEY);
-    return session ? JSON.parse(session) : null;
+    const rawUser = localStorage.getItem(USER_KEY);
+    return rawUser ? JSON.parse(rawUser) : null;
   },
 
-  refreshSession: async (): Promise<User> => {
-    const user = await get<User>('/api/users/me');
-    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-    return user;
+  refreshSession: async (): Promise<User | null> => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      clearSession();
+      return null;
+    }
+
+    try {
+      const user = await get<User>('/api/users/me');
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      return user;
+    } catch (error) {
+      clearSession();
+      return null;
+    }
   },
 
   updateProfile: async (updatedUser: User, _newPassword?: string): Promise<User> => {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser));
+    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
     return updatedUser;
   }
 };
