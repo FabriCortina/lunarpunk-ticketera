@@ -181,9 +181,6 @@ const App: React.FC = () => {
     };
   }, [paymentStatus, user]);
 
-    }
-  }, [notification]);
-
   const handleAuthSuccess = (authUser: User) => {
     setUser(authUser);
     setNotification(`Bienvenido, ${authUser.name}. Modo: ${authUser.role}`);
