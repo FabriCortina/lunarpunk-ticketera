@@ -1,13 +1,13 @@
 import type { Knex } from 'knex';
-import { env } from './src/config/env';
+import { env } from './backend/src/config/env';
 import path from 'path';
 
 // Determinar si estamos ejecutando desde 'dist' (js) o 'src' (ts) para las migraciones
 const isProduction = env.NODE_ENV === 'production';
 const migrationExt = isProduction ? 'js' : 'ts';
 const migrationDir = isProduction 
-  ? path.join(__dirname, 'dist', 'src', 'database', 'migrations') 
-  : path.join(__dirname, 'src', 'database', 'migrations');
+  ? path.join(__dirname, 'backend', 'dist', 'src', 'database', 'migrations') 
+  : path.join(__dirname, 'backend', 'src', 'database', 'migrations');
 
 const config: Knex.Config = {
   client: 'pg',
