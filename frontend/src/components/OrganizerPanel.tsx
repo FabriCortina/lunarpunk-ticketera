@@ -172,7 +172,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
-                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-white focus:border-lp-accent focus:outline-none transition-colors pl-10 font-body"
+                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors pl-10 font-body"
                 placeholder="Ej. Cyber Rave 2099"
                 required
               />
@@ -188,7 +188,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
                 name="location"
                 value={formData.location}
                 onChange={handleInputChange}
-                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-white focus:border-lp-accent focus:outline-none transition-colors pl-10 font-body"
+                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors pl-10 font-body"
                 placeholder="Ej. Sector 7, Neo-Tokyo"
                 required
               />
@@ -246,7 +246,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
             value={formData.description}
             onChange={handleInputChange}
             rows={4}
-            className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-white focus:border-lp-accent focus:outline-none transition-colors font-body"
+            className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors font-body"
             placeholder="Describe la experiencia..."
           />
         </div>
@@ -260,7 +260,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
                 name="dateTime"
                 value={formData.dateTime}
                 onChange={handleInputChange}
-                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-white focus:border-lp-accent focus:outline-none transition-colors pl-10 text-sm font-body"
+                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors pl-10 text-sm font-body"
                 required
               />
               <Calendar className="absolute left-3 top-3.5 text-slate-500" size={18} />
@@ -275,7 +275,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
                 name="price"
                 value={formData.price}
                 onChange={handleInputChange}
-                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-white focus:border-lp-accent focus:outline-none transition-colors pl-10 font-body"
+                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors pl-10 font-body"
                 placeholder="0.00"
                 min="0"
                 required
@@ -292,7 +292,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
                 name="tickets"
                 value={formData.tickets}
                 onChange={handleInputChange}
-                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-white focus:border-lp-accent focus:outline-none transition-colors pl-10 font-body"
+                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors pl-10 font-body"
                 placeholder="100"
                 min="1"
                 required

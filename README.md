@@ -126,7 +126,6 @@ El proyecto sigue una arquitectura de capas:
 
 ### Servicios Externos Requeridos
 - Cuenta de **MercadoPago** (Access Token)
-- Cuenta de **Google Gemini API** (API Key)
 
 ## 🚀 Instalación
 
@@ -207,10 +206,11 @@ QR_SECRET=tu_secreto_qr_muy_seguro_minimo_10_caracteres
 
 # Servicios Externos
 MP_ACCESS_TOKEN=tu_token_de_mercadopago
-API_KEY=tu_clave_de_gemini_api
+API_KEY= # opcional si no usas Gemini
 
 # Configuración de la App
-PUBLIC_BASE_URL=http://localhost:3000
+BACKEND_PUBLIC_BASE_URL=http://localhost:3100
+FRONTEND_PUBLIC_BASE_URL=http://localhost:3000
 ALLOWED_ORIGINS=*
 ```
 
@@ -221,7 +221,7 @@ ALLOWED_ORIGINS=*
 2. Ve a [Credenciales](https://www.mercadopago.com.ar/developers/panel/credentials)
 3. Copia tu **Access Token** (producción o test)
 
-#### Google Gemini API
+#### Google Gemini API (opcional)
 1. Ve a [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Crea una nueva API Key
 3. Copia la clave generada
@@ -241,8 +241,7 @@ Esto iniciará el frontend en `http://localhost:3000`
 #### Solo Backend
 
 ```bash
-npm run dev
-# O específicamente:
+npm run dev:backend
 npm run dev:backend
 ```
 
@@ -261,8 +260,8 @@ npm run build
 ```
 
 Esto compilará:
-- Backend TypeScript → JavaScript en `dist/`
-- Frontend React → Assets estáticos en `dist/client/`
+- Backend TypeScript → JavaScript en `backend/dist/`
+- Frontend React → Assets estáticos en `frontend/dist/`
 
 #### Iniciar Servidor
 
@@ -280,76 +279,30 @@ npm run deploy
 
 ```
 lunarpunk-ticketera/
-├── src/                          # Backend
-│   ├── app.ts                    # Punto de entrada del servidor
-│   ├── config/
-│   │   └── env.ts                # Configuración de variables de entorno
-│   ├── controllers/              # Controladores de rutas
-│   │   ├── event.controller.ts
-│   │   ├── payment.controller.ts
-│   │   └── ticket.controller.ts
-│   ├── database/
-│   │   ├── connection.ts         # Conexión a PostgreSQL
-│   │   └── migrations/           # Migraciones de base de datos
-│   ├── middlewares/
-│   │   └── auth.middleware.ts    # Middleware de autenticación
-│   ├── repositories/             # Capa de acceso a datos
-│   │   ├── event.repository.ts
-│   │   └── ticket.repository.ts
-│   ├── routes/                   # Definición de rutas
-│   │   ├── auth.routes.ts
-│   │   ├── event.routes.ts
-│   │   ├── payment.routes.ts
-│   │   ├── ticket.routes.ts
-│   │   ├── user.routes.ts
-│   │   └── webhook.routes.ts
-│   ├── schemas/                  # Esquemas Zod de validación
-│   │   ├── event.schema.ts
-│   │   ├── payment.schema.ts
-│   │   └── ticket.schema.ts
-│   ├── services/                 # Lógica de negocio
-│   │   ├── event.service.ts
-│   │   ├── payment.service.ts
-│   │   ├── ticket.service.ts
-│   │   └── geminiService.ts
-│   ├── types/
-│   │   └── fastify.d.ts          # Tipos de Fastify
-│   └── utils/
-│       ├── crypto.ts             # Utilidades criptográficas
-│       └── errors.ts             # Clases de error personalizadas
-│
-├── components/                   # Componentes React del Frontend
-│   ├── AuthScreen.tsx
-│   ├── BuyerPanel.tsx
-│   ├── EventCard.tsx
-│   ├── ExplorerTicketList.tsx
-│   ├── OrganizerPanel.tsx
-│   ├── OrganizerEventList.tsx
-│   ├── ProfileModal.tsx
-│   ├── TicketWallet.tsx
-│   └── ...
-│
-├── services/                     # Servicios del Frontend
-│   ├── authService.ts
-│   └── geminiService.ts
-│
-├── public/                       # Assets estáticos
-│   └── fonts/
-│       └── Xystema.ttf
-│
-├── App.tsx                       # Componente principal React
-├── index.tsx                     # Punto de entrada React
-├── index.html                    # HTML base
-├── types.ts                      # Tipos TypeScript compartidos
-├── constants.ts                  # Constantes de la aplicación
-│
-├── knexfile.ts                   # Configuración de Knex
-├── vite.config.ts                # Configuración de Vite
-├── tsconfig.json                  # Configuración de TypeScript
-├── package.json                   # Dependencias y scripts
-├── docker-compose.yml             # Configuración Docker
-├── .env.example                   # Ejemplo de variables de entorno
-└── README.md                      # Este archivo
+├── backend/                      # Backend Fastify (TS)
+│   ├── src/
+│   │   ├── app.ts
+│   │   ├── config/
+│   │   ├── controllers/
+│   │   ├── database/
+│   │   ├── middlewares/
+│   │   ├── repositories/
+│   │   ├── routes/
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   ├── types/
+│   │   └── utils/
+│   ├── dist/                     # Build backend
+│   └── knexfile.ts
+├── frontend/                     # Frontend React (Vite)
+│   ├── src/
+│   ├── public/
+│   ├── index.html
+│   └── vite.config.ts
+├── package.json
+├── docker-compose.yml
+├── .env.example
+└── README.md
 ```
 
 ## 🔌 API
@@ -363,9 +316,9 @@ lunarpunk-ticketera/
 
 #### Eventos
 - `GET /api/events` - Listar eventos publicados
-- `GET /api/events/my` - Listar eventos del organizador (requiere auth)
+- `GET /api/events/mine` - Listar eventos del organizador (requiere auth)
 - `POST /api/events` - Crear evento (requiere auth, ORGANIZER)
-- `PUT /api/events/:id` - Actualizar evento (requiere auth, owner)
+- `PATCH /api/events/:id` - Actualizar evento (requiere auth, owner)
 - `PATCH /api/events/:id/publish` - Publicar/ocultar evento (requiere auth, owner)
 - `DELETE /api/events/:id` - Eliminar evento (requiere auth, owner)
 
@@ -382,7 +335,7 @@ lunarpunk-ticketera/
 - Incluye `status` y `qrPayload` (puede ser `null` si aún no está pagado).
 
 #### Pagos
-- `POST /api/payments/preference` - Crear preferencia de pago MercadoPago
+- `POST /api/payments/create-preference` - Crear preferencia de pago MercadoPago
 - `POST /webhooks/mercadopago` - Webhook de MercadoPago
 
 #### Usuarios
@@ -452,8 +405,8 @@ Este proyecto está optimizado para desplegarse en [Railway](https://railway.app
    ```env
    JWT_SECRET=tu_secreto_seguro
    QR_SECRET=tu_secreto_qr_seguro
-   MP_ACCESS_TOKEN=tu_token_mercadopago
-   API_KEY=tu_clave_gemini
+  MP_ACCESS_TOKEN=tu_token_mercadopago
+  API_KEY= # opcional si no usas Gemini
    BACKEND_PUBLIC_BASE_URL=https://tu-backend.up.railway.app
    FRONTEND_PUBLIC_BASE_URL=https://tu-frontend.up.railway.app
    ALLOWED_ORIGINS=https://tu-app.up.railway.app
@@ -526,7 +479,7 @@ npx knex migrate:rollback
 - `price` (DECIMAL)
 - `capacity` (INTEGER)
 - `location` (VARCHAR)
-- `image_url` (VARCHAR)
+- `image_url` (TEXT)
 - `is_published` (BOOLEAN)
 - `created_at` (TIMESTAMP)
 

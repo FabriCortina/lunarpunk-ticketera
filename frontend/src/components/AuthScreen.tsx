@@ -77,7 +77,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             LUNARPUNK
           </h1>
           {/* Body -> Montserrat */}
-          <p className="text-lp-muted text-xs uppercase tracking-[0.3em] font-body">Acceso al Sistema</p>
+          <p className="text-lp-muted text-xs uppercase tracking-[0.3em] font-body">Acceso a la Comunidad</p>
         </div>
 
         {error && (
@@ -203,7 +203,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             }}
             className="text-lp-accent hover:text-white font-bold text-sm mt-1 uppercase tracking-wider transition-colors font-body"
           >
-            {isLogin ? "Registrarse en la Red" : "Acceder al Sistema"}
+            {isLogin ? "SUMATE!" : "Acceder a la Comunidad"}
           </button>
         </div>
       </div>
