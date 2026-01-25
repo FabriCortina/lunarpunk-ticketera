@@ -150,7 +150,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
               isLoading={loading}
               className="text-xs font-body"
             >
-              <Sparkles size={16} /> IA Assist
+              <Sparkles size={16} /> LunarIA
             </Button>
           )}
           {editingEvent && onCancelEdit && (
@@ -240,7 +240,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
         </div>
 
         <div className="space-y-2">
-          <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Descripción {editingEvent ? '' : '(IA Generada)'}</label>
+          <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Descripción {editingEvent ? '' : '(Puedes enriquecerla con LunarIA)'}</label>
           <textarea
             name="description"
             value={formData.description}
@@ -310,7 +310,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
             {editingEvent ? (
               <><Save size={20} /> Actualizar Evento</>
             ) : (
-              'Publicar Evento en la Red'
+              'Publicar evento a la comunidad'
             )}
           </Button>
         </div>

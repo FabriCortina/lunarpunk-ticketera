@@ -24,7 +24,9 @@ export const Moon: React.FC<MoonProps> = ({ size = 96 }) => {
   const radius = size / 2;
   const illumination = Math.min(Math.max(illuminationPct / 100, 0), 1);
   const offset = (waxing ? -1 : 1) * 2 * radius * illumination;
-  const label = `${phaseNameEs} · Iluminación ${illuminationPct}%`;
+  const phaseLabel = phaseNameEs;
+  const illuminationLabel = `Iluminación ${illuminationPct}%`;
+  const label = `${phaseLabel} · ${illuminationLabel}`;
   const glowSize = Math.round(size * 0.18);
 
   return (
@@ -46,8 +48,9 @@ export const Moon: React.FC<MoonProps> = ({ size = 96 }) => {
         </div>
         <span className="sr-only">{label}</span>
       </div>
-      <span className="text-[10px] uppercase tracking-wide text-lp-muted">
-        {label}
+      <span className="text-[10px] uppercase tracking-wide text-lp-muted text-center leading-tight">
+        <span className="block">{phaseLabel}</span>
+        <span className="block">{illuminationLabel}</span>
       </span>
     </div>
   );
