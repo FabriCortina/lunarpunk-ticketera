@@ -20,7 +20,7 @@ const envSchema = z.object({
   
   // Third Party
   MP_ACCESS_TOKEN: z.string().min(1, "MercadoPago Access Token required"),
-  API_KEY: z.string().min(1, "Google Gemini API Key is required"),
+  API_KEY: z.string().optional(),
   
   // App Config
   BACKEND_PUBLIC_BASE_URL: z.string().url().default('http://localhost:3100'),
