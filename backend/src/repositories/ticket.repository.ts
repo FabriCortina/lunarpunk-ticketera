@@ -97,6 +97,10 @@ export class TicketRepository {
     await this.db('tickets').where({ id }).update(data);
   }
 
+  async delete(id: string): Promise<void> {
+    await this.db('tickets').where({ id }).del();
+  }
+
   async markAsValidated(id: string): Promise<TicketEntity | undefined> {
     const [ticket] = await this.db('tickets')
       .where({ id, status: 'PAID' })

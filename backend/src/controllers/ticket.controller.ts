@@ -34,6 +34,12 @@ export class TicketController {
     return reply.status(200).send(qrData);
   };
 
+  delete = async (req: FastifyRequest, reply: FastifyReply) => {
+    const { id } = req.params as { id: string };
+    await this.ticketService.deleteExplorerTicket(req.user!.id, id);
+    return reply.status(204).send();
+  };
+
   validate = async (req: FastifyRequest, reply: FastifyReply) => {
     const { qrPayload } = req.body as ValidateTicketInput;
     const result = await this.ticketService.validateTicket(req.user!.id, qrPayload);

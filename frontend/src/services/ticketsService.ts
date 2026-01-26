@@ -1,4 +1,4 @@
-import { get, post } from '../lib/api';
+import { del, get, post } from '../lib/api';
 import { Ticket } from '../types';
 
 export const ticketsService = {
@@ -19,6 +19,9 @@ export const ticketsService = {
 
   getTicketQr: async (ticketId: string): Promise<{ qrPayload: string | null }> =>
     get(`/api/tickets/${ticketId}/qr`),
+
+  deleteTicket: async (ticketId: string): Promise<void> =>
+    del(`/api/tickets/${ticketId}`),
 
   getEventTickets: async (eventId: string) =>
     get(`/api/tickets/event/${eventId}`),

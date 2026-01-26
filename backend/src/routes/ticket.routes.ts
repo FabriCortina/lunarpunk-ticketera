@@ -49,6 +49,17 @@ export async function ticketRoutes(app: FastifyInstance) {
     ticketController.getById
   );
 
+  router.delete(
+    '/:id',
+    {
+      preHandler: authorize(['EXPLORER']),
+      schema: {
+        params: getTicketByIdSchema
+      }
+    },
+    ticketController.delete
+  );
+
   router.get(
     '/event/:eventId',
     {

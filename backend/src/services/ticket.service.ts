@@ -113,6 +113,24 @@ export class TicketService {
     return { qrPayload: ticket.qr_payload };
   }
 
+  async deleteExplorerTicket(userId: string, ticketId: string) {
+    const ticket = await this.ticketRepository.findByIdWithEvent(ticketId);
+
+    if (!ticket) {
+      throw new AppError('Ticket not found', 404);
+    }
+
+    if (ticket.explorer_id !== userId) {
+      throw new AppError('Forbidden: This ticket does not belong to you', 403);
+    }
+
+    if (ticket.status !== 'PENDING' && ticket.status !== 'CANCELED') {
+      throw new AppError('Only pending or canceled tickets can be deleted', 400);
+    }
+
+    await this.ticketRepository.delete(ticketId);
+  }
+
   async validateTicket(organizerId: string, qrPayloadString: string) {
     // 1. Verificar Firma Criptográfica
     const data = verifyQrPayload(qrPayloadString);

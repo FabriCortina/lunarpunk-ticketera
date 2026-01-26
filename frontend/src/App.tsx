@@ -96,8 +96,35 @@ const App: React.FC = () => {
             ? 'El pago no se pudo completar.'
             : 'Tu pago está pendiente.'
       );
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
+
+  useEffect(() => {
+    if (paymentStatus !== 'failure' && paymentStatus !== 'pending') {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setPaymentStatus(null);
+      setPaymentMessage(null);
+    }, 6000);
+
+    return () => clearTimeout(timer);
+  }, [paymentStatus]);
+
+  useEffect(() => {
+    if (paymentStatus !== 'success' || paymentMessage !== 'Pago confirmado.') {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setPaymentStatus(null);
+      setPaymentMessage(null);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [paymentStatus, paymentMessage]);
 
   useEffect(() => {
     if (notification) {
@@ -216,6 +243,16 @@ const App: React.FC = () => {
   const handleGoToEvents = () => {
     setExplorerView('events');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRemoveTicket = async (ticketId: string) => {
+    try {
+      await ticketsService.deleteTicket(ticketId);
+      setTickets(prev => prev.filter(ticket => ticket.id !== ticketId));
+      setNotification('Ticket eliminado.');
+    } catch (error: any) {
+      setNotification(error?.message || 'No se pudo eliminar el ticket.');
+    }
   };
 
   // --- ORGANIZER ACTIONS (STRICT) ---
@@ -571,6 +608,7 @@ const App: React.FC = () => {
                     events={events} // We pass all events to look up details, but tickets are strict filtered
                     userId={user.id}
                     onGoToEvents={handleGoToEvents}
+                    onDeleteTicket={handleRemoveTicket}
                  />
                )}
             </div>
@@ -583,7 +621,7 @@ const App: React.FC = () => {
       <footer className="border-t border-lp-border py-8 mt-12 bg-lp-bg">
         <div className="container mx-auto px-4 text-center">
           <p className="text-lp-muted font-body text-xs">
-            © 2077 LUNARPUNK TICKETERA. USUARIO: {user.id.slice(0, 8)}...
+            © 2077 LUNARPUNK TICKETERA.
           </p>
         </div>
       </footer>
@@ -595,6 +633,7 @@ const App: React.FC = () => {
           events={events} 
           onClose={() => setShowWallet(false)}
           userId={user.id} 
+          onDeleteTicket={handleRemoveTicket}
         />
       )}
 
