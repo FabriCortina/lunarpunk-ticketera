@@ -195,11 +195,6 @@ export const TicketWallet: React.FC<TicketWalletProps> = ({ tickets, events, onC
                       {/* Event Title -> H3 -> text-2xl */}
                       <h4 className="font-title font-bold text-white text-2xl leading-tight mb-1">{event.title}</h4>
                       <p className="text-lp-accent text-xs font-mono">{new Date(event.dateTime).toLocaleDateString()}</p>
-                      {ticket.ticketTypeName && (
-                        <p className="mt-1 text-[10px] uppercase tracking-wider text-lp-accent font-body">
-                          Tipo: {ticket.ticketTypeName}
-                        </p>
-                      )}
                     </div>
                     
                      {/* QR Logic */}
@@ -226,6 +221,14 @@ export const TicketWallet: React.FC<TicketWalletProps> = ({ tickets, events, onC
                          </div>
                     )}
                   </div>
+
+                  {ticket.ticketTypeName && (
+                    <div className="mt-1 mb-3 text-center relative z-10">
+                      <p className="text-lp-accent text-sm font-title uppercase tracking-wider">
+                        {ticket.ticketTypeName}
+                      </p>
+                    </div>
+                  )}
                   
                   <div className="border-t border-white/5 my-3 pt-3 flex justify-between items-center relative z-10 font-body">
                      {renderStatus(ticket)}

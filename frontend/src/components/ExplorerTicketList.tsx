@@ -326,14 +326,17 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
                   <div>
                     <h3 className="text-xl font-title font-bold text-white leading-tight">{event.title}</h3>
                     <p className="text-slate-400 text-xs font-body">{event.location}</p>
-                    {ticket.ticketTypeName && (
-                      <p className="mt-1 text-[10px] uppercase tracking-wider text-lp-accent font-body">
-                        Tipo: {ticket.ticketTypeName}
-                      </p>
-                    )}
                   </div>
                   {renderStatus(ticket)}
                 </div>
+
+                {ticket.ticketTypeName && (
+                  <div className="mb-4 text-center">
+                    <p className="text-lp-accent text-lg md:text-xl font-title uppercase tracking-wider">
+                      {ticket.ticketTypeName}
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2 text-sm text-slate-400 font-body">
                   <div className="flex items-center gap-2">
