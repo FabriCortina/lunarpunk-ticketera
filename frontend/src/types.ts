@@ -45,6 +45,9 @@ export interface Ticket {
   createdAt: string; // Renamed from purchaseDate
   qrPayload?: string | null;
   ticketCode?: string;
+  ticketTypeName?: string | null;
+  ticketTypeDescription?: string | null;
+  ticketTypePrice?: number | null;
 }
 
 export enum UserRole {

@@ -7,9 +7,10 @@ interface EventCardProps {
   event: Event;
   onBuy?: (event: Event) => void;
   isOrganizer?: boolean;
+  selectedTicketTypeName?: string;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, onBuy, isOrganizer }) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, onBuy, isOrganizer, selectedTicketTypeName }) => {
   const formattedDate = new Date(event.dateTime).toLocaleDateString('es-ES', {
     weekday: 'short',
     day: 'numeric',
@@ -70,6 +71,14 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onBuy, isOrganizer 
                {event.availableTickets} tickets restantes
              </span>
           </div>
+          {selectedTicketTypeName && (
+            <div className="flex items-center gap-2">
+              <Tag size={14} className="text-lp-accent" />
+              <span className="text-lp-accent text-[10px] uppercase tracking-wider font-body">
+                Tipo: {selectedTicketTypeName}
+              </span>
+            </div>
+          )}
         </div>
 
         <p className="text-lp-muted text-sm mb-6 line-clamp-2 flex-1 font-body">

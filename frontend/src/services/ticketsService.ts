@@ -34,5 +34,8 @@ const mapTicket = (ticket: any): Ticket => ({
   status: ticket.status,
   createdAt: ticket.created_at ?? ticket.createdAt,
   qrPayload: ticket.qrPayload ?? ticket.qr_payload ?? null,
-  ticketCode: ticket.ticketCode ?? ticket.id
+  ticketCode: ticket.ticketCode ?? ticket.id,
+  ticketTypeName: ticket.ticket_type_name ?? ticket.ticketTypeName ?? null,
+  ticketTypeDescription: ticket.ticket_type_description ?? ticket.ticketTypeDescription ?? null,
+  ticketTypePrice: ticket.ticket_type_price ?? ticket.ticketTypePrice ?? null
 });

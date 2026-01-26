@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Event } from '../types';
 import { Button } from './Button';
 import { X, Calendar, MapPin, Tag, Share2, Info } from 'lucide-react';
@@ -7,9 +7,10 @@ interface EventDetailModalProps {
   event: Event;
   onClose: () => void;
   onBuy: (event: Event, ticketTypeId?: string) => void;
+  onSelectType?: (eventId: string, ticketTypeName: string) => void;
 }
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onBuy }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onBuy, onSelectType }) => {
   const formattedDate = new Date(event.dateTime).toLocaleDateString('es-ES', {
     weekday: 'long',
     year: 'numeric',
@@ -20,15 +21,20 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
   });
 
   const ticketTypes = event.ticketTypes || [];
-  const [selectedTypeId, setSelectedTypeId] = useState<string | undefined>(
-    ticketTypes[0]?.id
-  );
+  const [selectedTypeId, setSelectedTypeId] = useState<string | undefined>(ticketTypes[0]?.id);
   const selectedType = useMemo(
     () => ticketTypes.find((type) => type.id === selectedTypeId),
     [ticketTypes, selectedTypeId]
   );
   const displayPrice = selectedType?.price ?? event.price;
   const remaining = selectedType?.available ?? event.availableTickets;
+  const selectedTypeLabel = selectedType?.name;
+
+  useEffect(() => {
+    if (selectedType?.name) {
+      onSelectType?.(event.id, selectedType.name);
+    }
+  }, [event.id, onSelectType, selectedType?.name]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
@@ -105,7 +111,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     <button
                       key={type.id}
                       type="button"
-                      onClick={() => setSelectedTypeId(type.id)}
+                      onClick={() => {
+                        setSelectedTypeId(type.id);
+                        onSelectType?.(event.id, type.name);
+                      }}
                       className={`w-full text-left rounded-lg border px-4 py-3 transition-all ${
                         selectedTypeId === type.id
                           ? 'border-lp-accent bg-lp-accent/10'
@@ -130,6 +139,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             <div className="text-center md:text-left">
               <p className="text-slate-400 text-xs uppercase tracking-wider mb-1 font-body">Precio del Ticket</p>
               <p className="text-3xl font-title font-bold text-white">${displayPrice}</p>
+              {selectedTypeLabel && (
+                <p className="mt-1 text-[10px] uppercase tracking-wider text-lp-accent font-body">
+                  Tipo seleccionado: {selectedTypeLabel}
+                </p>
+              )}
             </div>
 
             <div className="w-full md:w-auto flex flex-col gap-2">

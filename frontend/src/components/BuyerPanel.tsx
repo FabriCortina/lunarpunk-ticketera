@@ -12,6 +12,7 @@ interface BuyerPanelProps {
 export const BuyerPanel: React.FC<BuyerPanelProps> = ({ events, onBuyTicket }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedTypeByEventId, setSelectedTypeByEventId] = useState<Record<string, string>>({});
 
   const filteredEvents = events.filter(e => 
     e.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -58,6 +59,7 @@ export const BuyerPanel: React.FC<BuyerPanelProps> = ({ events, onBuyTicket }) =
             <div key={event.id} onClick={() => setSelectedEvent(event)} className="cursor-pointer">
                <EventCard
                  event={event}
+                 selectedTicketTypeName={selectedTypeByEventId[event.id]}
                  onBuy={(e) => {
                    if (e.ticketTypes && e.ticketTypes.length > 0) {
                      setSelectedEvent(e);
@@ -77,6 +79,12 @@ export const BuyerPanel: React.FC<BuyerPanelProps> = ({ events, onBuyTicket }) =
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onBuy={onBuyTicket}
+          onSelectType={(eventId, ticketTypeName) => {
+            setSelectedTypeByEventId(prev => ({
+              ...prev,
+              [eventId]: ticketTypeName
+            }));
+          }}
         />
       )}
     </div>
