@@ -372,11 +372,11 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
               </div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-[10px] uppercase tracking-wider text-lp-muted font-body">Descripción</label>
-                <input
-                  type="text"
+                <textarea
                   value={type.description}
                   onChange={(e) => updateTicketType(index, 'description', e.target.value)}
-                  className="w-full bg-lp-bg/50 border border-lp-border rounded p-2 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors font-body text-sm"
+                  rows={2}
+                  className="w-full bg-lp-bg/50 border border-lp-border rounded p-2 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors font-body text-sm resize-none"
                   placeholder="Acceso general"
                   required
                   disabled={!!editingEvent}

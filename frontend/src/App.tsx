@@ -364,7 +364,14 @@ const App: React.FC = () => {
     if (targetEvent.availableTickets > 0) {
       try {
         const newTicket = await ticketsService.reserveTicket(targetEvent.id, ticketTypeId);
-        setTickets([newTicket, ...tickets]);
+        const selectedType = targetEvent.ticketTypes?.find((type) => type.id === ticketTypeId);
+        const hydratedTicket = {
+          ...newTicket,
+          ticketTypeName: newTicket.ticketTypeName ?? selectedType?.name ?? null,
+          ticketTypeDescription: newTicket.ticketTypeDescription ?? selectedType?.description ?? null,
+          ticketTypePrice: newTicket.ticketTypePrice ?? selectedType?.price ?? null
+        };
+        setTickets([hydratedTicket, ...tickets]);
         
         setEvents(events.map(e => 
           e.id === targetEvent.id 
