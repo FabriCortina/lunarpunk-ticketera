@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist"
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "knexfile.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.tsx",
+    "**/*.test.ts",
+    "vite.config.ts",
+    "components",
+    "services",
+    "tests"
+  ]
+}

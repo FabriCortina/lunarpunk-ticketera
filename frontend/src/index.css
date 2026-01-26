@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- LUNAR PUNK DESIGN SYSTEM OFFICIAL TOKENS --- */
+
+/* Typography Setup */
+@font-face {
+  font-family: "Xystema";
+  src: url("/fonts/Xystema.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Xystema";
+  src: url("/fonts/Xystema.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Xystema";
+  src: url("/fonts/Xystema.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Forced Title Class */
+.lp-title {
+  font-family: "Xystema", system-ui, Arial !important;
+}
+
+:root {
+  /* FONT TOKENS */
+  --font-title: "Xystema", Impact, sans-serif;
+  --font-body: "Montserrat", system-ui, sans-serif;
+
+  /* OFFICIAL PALETTE HEX CODES */
+  --lp-primary-1: #7435ed; /* Purple */
+  --lp-primary-2: #10ffbb; /* Mint */
+
+  --lp-navy: #0f0149;
+  --lp-blue: #0039d8;
+  --lp-cyan: #04eaf9;
+  --lp-lime: #daff02;
+  --lp-orange: #ff5e2c;
+
+  /* GLOBAL TOKENS */
+  --lp-bg: #0f0149; /* lp-navy as base background */
+  --lp-surface: rgba(255, 255, 255, 0.06);
+  --lp-border: rgba(255, 255, 255, 0.12);
+  --lp-text: #ffffff;
+  --lp-muted: rgba(255, 255, 255, 0.72);
+
+  --lp-primary: var(--lp-primary-1);
+  --lp-accent: var(--lp-primary-2);
+
+  /* STATUS TOKENS */
+  --lp-success: var(--lp-primary-2); /* Mint for Success */
+  --lp-warning: var(--lp-lime); /* Lime for Warning */
+  --lp-error: var(--lp-orange); /* Orange for Error */
+
+  /* OFFICIAL GRADIENTS */
+  --lp-grad-purple: linear-gradient(180deg, #7435ed 0%, #0f0149 100%);
+  --lp-grad-mint: linear-gradient(180deg, #10ffbb 0%, #0f0149 100%);
+  --lp-grad-aurora: linear-gradient(135deg, #7435ed 0%, #0039d8 35%, #04eaf9 70%, #10ffbb 100%);
+
+  /* PRIMARY BUTTON GRADIENT (Mapped to Aurora as per branding preference for main actions) */
+  --lp-grad-primary: var(--lp-grad-aurora);
+}
+
+body {
+  background-color: var(--lp-bg);
+  color: var(--lp-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typographic Rules - Base Layer Override */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-title);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* UI Components Base */
+.glass-panel {
+  background: var(--lp-surface);
+  border: 1px solid var(--lp-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Utilities */
+.bg-lp-grad-primary {
+  background: var(--lp-grad-primary);
+}
+.bg-lp-grad-aurora {
+  background: var(--lp-grad-aurora);
+}
+.bg-lp-grad-purple {
+  background: var(--lp-grad-purple);
+}
+.bg-lp-grad-mint {
+  background: var(--lp-grad-mint);
+}
+
+.text-gradient-lp {
+  background: var(--lp-grad-aurora);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--lp-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--lp-primary);
+}
