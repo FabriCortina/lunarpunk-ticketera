@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Event } from '../types';
 import { Button } from './Button';
 import { X, Calendar, MapPin, Tag, Share2, Info } from 'lucide-react';
@@ -6,7 +6,7 @@ import { X, Calendar, MapPin, Tag, Share2, Info } from 'lucide-react';
 interface EventDetailModalProps {
   event: Event;
   onClose: () => void;
-  onBuy: (event: Event) => void;
+  onBuy: (event: Event, ticketTypeId?: string) => void;
 }
 
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onBuy }) => {
@@ -18,6 +18,17 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     hour: '2-digit',
     minute: '2-digit'
   });
+
+  const ticketTypes = event.ticketTypes || [];
+  const [selectedTypeId, setSelectedTypeId] = useState<string | undefined>(
+    ticketTypes[0]?.id
+  );
+  const selectedType = useMemo(
+    () => ticketTypes.find((type) => type.id === selectedTypeId),
+    [ticketTypes, selectedTypeId]
+  );
+  const displayPrice = selectedType?.price ?? event.price;
+  const remaining = selectedType?.available ?? event.availableTickets;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
@@ -85,30 +96,61 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             </p>
           </div>
 
-          <div className="mt-auto border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="mt-auto border-t border-white/10 pt-6 flex flex-col gap-5">
+            {ticketTypes.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-slate-400 text-xs uppercase tracking-wider font-body">Tipos de ticket</p>
+                <div className="grid grid-cols-1 gap-3">
+                  {ticketTypes.map((type) => (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => setSelectedTypeId(type.id)}
+                      className={`w-full text-left rounded-lg border px-4 py-3 transition-all ${
+                        selectedTypeId === type.id
+                          ? 'border-lp-accent bg-lp-accent/10'
+                          : 'border-white/10 bg-slate-900/40 hover:border-lp-accent/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-white font-body font-bold">{type.name}</span>
+                        <span className="text-lp-accent font-body font-bold">${type.price}</span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1 font-body">{type.description}</p>
+                      <p className="text-[10px] text-slate-500 mt-1 font-body">
+                        {type.available} disponibles
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="text-center md:text-left">
               <p className="text-slate-400 text-xs uppercase tracking-wider mb-1 font-body">Precio del Ticket</p>
-              <p className="text-3xl font-title font-bold text-white">${event.price}</p>
+              <p className="text-3xl font-title font-bold text-white">${displayPrice}</p>
             </div>
 
             <div className="w-full md:w-auto flex flex-col gap-2">
                <Button 
                   onClick={() => {
-                     onBuy(event);
+                     onBuy(event, selectedTypeId);
                      onClose();
                   }}
-                  disabled={event.availableTickets === 0}
+                  disabled={remaining === 0}
                   className="w-full md:w-auto px-8 py-3 text-base font-body"
                >
-                  {event.availableTickets === 0 ? "Sold Out" : "Comprar Ticket (Reservar)"}
+                  {remaining === 0 ? "Sold Out" : "Comprar Ticket (Reservar)"}
                </Button>
-               {event.availableTickets > 0 && (
+               {remaining > 0 && (
                  <p className="text-[10px] text-center text-slate-500 font-body">
                     <Tag size={10} className="inline mr-1" />
-                    {event.availableTickets} tickets restantes
+                   {remaining} tickets restantes
                  </p>
                )}
             </div>
+          </div>
           </div>
 
         </div>

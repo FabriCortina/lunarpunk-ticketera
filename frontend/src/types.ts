@@ -18,6 +18,16 @@ export interface Event {
   capacity: number;
   isPublished: boolean;
   organizerId: string;
+  ticketTypes?: TicketType[];
+}
+
+export interface TicketType {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  capacity: number;
+  available: number;
 }
 
 export enum TicketStatus {

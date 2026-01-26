@@ -6,7 +6,7 @@ import { Search, Map } from 'lucide-react';
 
 interface BuyerPanelProps {
   events: Event[];
-  onBuyTicket: (event: Event) => void;
+  onBuyTicket: (event: Event, ticketTypeId?: string) => void;
 }
 
 export const BuyerPanel: React.FC<BuyerPanelProps> = ({ events, onBuyTicket }) => {
@@ -56,10 +56,14 @@ export const BuyerPanel: React.FC<BuyerPanelProps> = ({ events, onBuyTicket }) =
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredEvents.map(event => (
             <div key={event.id} onClick={() => setSelectedEvent(event)} className="cursor-pointer">
-               <EventCard 
-                 event={event} 
+               <EventCard
+                 event={event}
                  onBuy={(e) => {
-                    onBuyTicket(e); 
+                   if (e.ticketTypes && e.ticketTypes.length > 0) {
+                     setSelectedEvent(e);
+                     return;
+                   }
+                   onBuyTicket(e);
                  }}
                />
             </div>
@@ -69,8 +73,8 @@ export const BuyerPanel: React.FC<BuyerPanelProps> = ({ events, onBuyTicket }) =
 
       {/* Detail Modal */}
       {selectedEvent && (
-        <EventDetailModal 
-          event={selectedEvent} 
+        <EventDetailModal
+          event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onBuy={onBuyTicket}
         />

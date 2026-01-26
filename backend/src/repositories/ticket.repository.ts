@@ -5,6 +5,7 @@ export interface TicketEntity {
   id: string;
   event_id: string;
   explorer_id: string;
+  ticket_type_id?: string | null;
   status: 'PENDING' | 'PAID' | 'VALIDATED' | 'CANCELED';
   created_at: Date;
   mp_preference_id?: string;
@@ -18,6 +19,9 @@ export interface TicketWithEvent extends TicketEntity {
   event_price: number;
   event_description: string;
   organizer_id: string;
+  ticket_type_name?: string | null;
+  ticket_type_description?: string | null;
+  ticket_type_price?: number | null;
 }
 
 export class TicketRepository {
@@ -33,7 +37,14 @@ export class TicketRepository {
   async findByExplorerId(explorerId: string): Promise<TicketEntity[]> {
     return this.db('tickets')
       .join('events', 'tickets.event_id', 'events.id')
-      .select('tickets.*', 'events.title as event_title', 'events.datetime as event_datetime')
+      .leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id')
+      .select(
+        'tickets.*',
+        'events.title as event_title',
+        'events.datetime as event_datetime',
+        'ticket_types.name as ticket_type_name',
+        'ticket_types.price as ticket_type_price'
+      )
       .where({ explorer_id: explorerId })
       .orderBy('tickets.created_at', 'desc');
   }
@@ -54,15 +65,29 @@ export class TicketRepository {
     return Number(result?.count || 0);
   }
 
+  async countByTicketTypeId(ticketTypeId: string): Promise<number> {
+    const result = await this.db('tickets')
+      .where({ ticket_type_id: ticketTypeId })
+      .andWhereNot({ status: 'CANCELED' })
+      .count('id as count')
+      .first();
+
+    return Number(result?.count || 0);
+  }
+
   async findByIdWithEvent(id: string): Promise<TicketWithEvent | undefined> {
     return this.db('tickets')
       .join('events', 'tickets.event_id', 'events.id')
+      .leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id')
       .select(
         'tickets.*',
         'events.title as event_title',
         'events.price as event_price',
         'events.description as event_description',
-        'events.organizer_id'
+        'events.organizer_id',
+        'ticket_types.name as ticket_type_name',
+        'ticket_types.description as ticket_type_description',
+        'ticket_types.price as ticket_type_price'
       )
       .where('tickets.id', id)
       .first();

@@ -4,13 +4,15 @@ import { TicketController } from '../controllers/ticket.controller';
 import { TicketService } from '../services/ticket.service';
 import { TicketRepository } from '../repositories/ticket.repository';
 import { EventRepository } from '../repositories/event.repository';
+import { TicketTypeRepository } from '../repositories/ticketType.repository';
 import { reserveTicketSchema, getEventTicketsSchema, getTicketQrSchema, getTicketByIdSchema, validateTicketSchema } from '../schemas/ticket.schema';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 
 export async function ticketRoutes(app: FastifyInstance) {
   const ticketRepository = new TicketRepository();
   const eventRepository = new EventRepository();
-  const ticketService = new TicketService(ticketRepository, eventRepository);
+  const ticketTypeRepository = new TicketTypeRepository();
+  const ticketService = new TicketService(ticketRepository, eventRepository, ticketTypeRepository);
   const ticketController = new TicketController(ticketService);
 
   const router = app.withTypeProvider<ZodTypeProvider>();

@@ -3,13 +3,17 @@ import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { EventController } from '../controllers/event.controller';
 import { EventService } from '../services/event.service';
 import { EventRepository } from '../repositories/event.repository';
+import { TicketTypeRepository } from '../repositories/ticketType.repository';
+import { TicketRepository } from '../repositories/ticket.repository';
 import { createEventSchema, updateEventSchema } from '../schemas/event.schema';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { z } from 'zod';
 
 export async function eventRoutes(app: FastifyInstance) {
   const eventRepository = new EventRepository();
-  const eventService = new EventService(eventRepository);
+  const ticketTypeRepository = new TicketTypeRepository();
+  const ticketRepository = new TicketRepository();
+  const eventService = new EventService(eventRepository, ticketTypeRepository, ticketRepository);
   const eventController = new EventController(eventService);
 
   const router = app.withTypeProvider<ZodTypeProvider>();

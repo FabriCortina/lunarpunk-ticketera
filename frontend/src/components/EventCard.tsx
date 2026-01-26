@@ -23,6 +23,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onBuy, isOrganizer 
     if (onBuy) onBuy(event);
   };
 
+  const hasTicketTypes = !!event.ticketTypes?.length;
+
   return (
     <div className="glass-panel rounded-xl overflow-hidden group hover:border-lp-accent/50 transition-all duration-300 flex flex-col h-full hover:shadow-lg hover:shadow-lp-accent/10 transform hover:-translate-y-1">
       <div className="relative h-48 overflow-hidden">
@@ -34,7 +36,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onBuy, isOrganizer 
         <div className="absolute inset-0 bg-gradient-to-t from-lp-bg via-transparent to-transparent"></div>
         {/* Badge de precio -> Body */}
         <div className="absolute bottom-3 right-3 bg-lp-navy/80 backdrop-blur px-3 py-1 rounded-full border border-lp-border text-lp-accent font-body font-bold">
-          ${event.price}
+          {hasTicketTypes ? `Desde $${event.price}` : `$${event.price}`}
         </div>
         
         {/* Overlay Hint */}

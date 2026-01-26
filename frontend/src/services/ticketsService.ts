@@ -2,8 +2,8 @@ import { get, post } from '../lib/api';
 import { Ticket } from '../types';
 
 export const ticketsService = {
-  reserveTicket: async (eventId: string): Promise<Ticket> => {
-    const ticket = await post<any>('/api/tickets/reserve', { eventId });
+  reserveTicket: async (eventId: string, ticketTypeId?: string): Promise<Ticket> => {
+    const ticket = await post<any>('/api/tickets/reserve', { eventId, ticketTypeId });
     return mapTicket(ticket);
   },
 

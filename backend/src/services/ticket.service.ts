@@ -1,15 +1,17 @@
 import { TicketRepository } from '../repositories/ticket.repository';
 import { EventRepository } from '../repositories/event.repository';
+import { TicketTypeRepository } from '../repositories/ticketType.repository';
 import { AppError } from '../utils/errors';
 import { verifyQrPayload } from '../utils/crypto';
 
 export class TicketService {
   constructor(
     private ticketRepository: TicketRepository,
-    private eventRepository: EventRepository
+    private eventRepository: EventRepository,
+    private ticketTypeRepository: TicketTypeRepository
   ) {}
 
-  async reserveTicket(userId: string, eventId: string) {
+  async reserveTicket(userId: string, eventId: string, ticketTypeId?: string) {
     const event = await this.eventRepository.findById(eventId);
 
     if (!event) {
@@ -20,8 +22,32 @@ export class TicketService {
       throw new AppError('Cannot reserve tickets for unpublished events', 400);
     }
 
+    const ticketTypes = await this.ticketTypeRepository.findByEventId(eventId);
+    if (ticketTypes.length > 0) {
+      if (!ticketTypeId) {
+        throw new AppError('Ticket type is required for this event', 400);
+      }
+
+      const ticketType = ticketTypes.find((type) => type.id === ticketTypeId);
+      if (!ticketType) {
+        throw new AppError('Invalid ticket type for this event', 400);
+      }
+
+      const soldCount = await this.ticketRepository.countByTicketTypeId(ticketTypeId);
+      if (soldCount >= Number(ticketType.capacity)) {
+        throw new AppError('Ticket type is sold out', 409);
+      }
+
+      return this.ticketRepository.create({
+        event_id: eventId,
+        explorer_id: userId,
+        ticket_type_id: ticketTypeId,
+        status: 'PENDING',
+      });
+    }
+
     const soldCount = await this.ticketRepository.countByEventId(eventId);
-    if (soldCount >= event.capacity) {
+    if (soldCount >= Number(event.capacity)) {
       throw new AppError('Event is sold out', 409);
     }
 

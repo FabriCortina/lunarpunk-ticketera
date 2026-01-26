@@ -31,16 +31,22 @@ export class PaymentService {
     const notificationUrl = `${env.BACKEND_PUBLIC_BASE_URL}/webhooks/mercadopago`;
 
     try {
+      const unitPrice = ticket.ticket_type_price ?? ticket.event_price;
+      const itemTitle = ticket.ticket_type_name
+        ? `${ticket.event_title} - ${ticket.ticket_type_name}`
+        : ticket.event_title;
+      const itemDescription = ticket.ticket_type_description || ticket.event_description;
+
       const result = await preference.create({
         body: {
           items: [
             {
               id: ticket.event_id,
-              title: ticket.event_title,
+              title: itemTitle,
               quantity: 1,
-              unit_price: Number(ticket.event_price),
+              unit_price: Number(unitPrice),
               currency_id: 'ARS',
-              description: ticket.event_description?.substring(0, 200)
+              description: itemDescription?.substring(0, 200)
             }
           ],
           external_reference: ticket.id,
@@ -69,7 +75,10 @@ export class PaymentService {
         mp_preference_id: result.id
       });
 
-      return { init_point: result.init_point };
+      return {
+        init_point: result.init_point,
+        sandbox_init_point: result.sandbox_init_point ?? null
+      };
 
     } catch (error: any) {
       console.error('MercadoPago Error:', error);

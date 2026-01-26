@@ -6,8 +6,8 @@ export class TicketController {
   constructor(private ticketService: TicketService) {}
 
   reserve = async (req: FastifyRequest, reply: FastifyReply) => {
-    const { eventId } = req.body as ReserveTicketInput;
-    const ticket = await this.ticketService.reserveTicket(req.user!.id, eventId);
+    const { eventId, ticketTypeId } = req.body as ReserveTicketInput;
+    const ticket = await this.ticketService.reserveTicket(req.user!.id, eventId, ticketTypeId);
     return reply.status(201).send(ticket);
   };
 

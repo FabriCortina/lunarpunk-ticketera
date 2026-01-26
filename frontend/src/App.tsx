@@ -305,7 +305,7 @@ const App: React.FC = () => {
 
   // --- EXPLORER ACTIONS (STRICT) ---
 
-  const handleBuyTicket = async (event: Event) => {
+  const handleBuyTicket = async (event: Event, ticketTypeId?: string) => {
     if (!user) return;
     
     if (user.role !== UserRole.EXPLORER) {
@@ -319,14 +319,27 @@ const App: React.FC = () => {
         return;
     }
 
+    if (targetEvent.ticketTypes && targetEvent.ticketTypes.length > 0 && !ticketTypeId) {
+        setNotification('Selecciona un tipo de ticket.');
+        return;
+    }
+
     if (targetEvent.availableTickets > 0) {
       try {
-        const newTicket = await ticketsService.reserveTicket(targetEvent.id);
+        const newTicket = await ticketsService.reserveTicket(targetEvent.id, ticketTypeId);
         setTickets([newTicket, ...tickets]);
         
         setEvents(events.map(e => 
           e.id === targetEvent.id 
-            ? { ...e, availableTickets: Math.max(e.availableTickets - 1, 0) } 
+            ? {
+                ...e,
+                availableTickets: Math.max(e.availableTickets - 1, 0),
+                ticketTypes: e.ticketTypes?.map((type) =>
+                  type.id === ticketTypeId
+                    ? { ...type, available: Math.max(type.available - 1, 0) }
+                    : type
+                )
+              }
             : e
         ));
 
