@@ -5,7 +5,7 @@ declare module 'fastify' {
     user?: {
       id: string;
       email: string;
-      role: 'ORGANIZER' | 'EXPLORER';
+      role: 'ORGANIZER' | 'EXPLORER' | 'ADMIN';
     };
   }
 }

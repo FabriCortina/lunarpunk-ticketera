@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole, Event, Ticket, TicketStatus, User } from './types';
+import { UserRole, Event, Ticket, TicketStatus, User, AdminDashboardData, OrganizerSummary } from './types';
 import { OrganizerPanel } from './components/OrganizerPanel';
 import { OrganizerEventList } from './components/OrganizerEventList';
 import { BuyerPanel } from './components/BuyerPanel';
@@ -12,9 +12,11 @@ import { Button } from './components/Button';
 import { BrandLogo } from './components/BrandLogo';
 import { Moon } from './components/Moon';
 import { MoonCursor } from './components/MoonCursor';
+import { AdminDashboard } from './components/AdminDashboard';
 import { authService } from './services/authService';
 import { eventsService } from './services/eventsService';
 import { ticketsService } from './services/ticketsService';
+import { adminService } from './services/adminService';
 import { Ticket as TicketIcon, Sparkles, LogOut, ShieldCheck, Map, Database, AlertTriangle, User as UserIcon } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -31,6 +33,9 @@ const App: React.FC = () => {
   const [notification, setNotification] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'failure' | 'pending' | null>(null);
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
+  const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
+  const [pendingOrganizers, setPendingOrganizers] = useState<OrganizerSummary[]>([]);
+  const [allOrganizers, setAllOrganizers] = useState<OrganizerSummary[]>([]);
   
   const [explorerView, setExplorerView] = useState<'events' | 'tickets'>('events');
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -151,6 +156,17 @@ const App: React.FC = () => {
           const organizerEvents = await eventsService.getMine();
           setEvents(organizerEvents);
           setTickets([]);
+        } else if (user.role === UserRole.ADMIN) {
+          const [dashboard, organizers, all] = await Promise.all([
+            adminService.getDashboard(),
+            adminService.getOrganizers('PENDING_APPROVAL'),
+            adminService.getOrganizers()
+          ]);
+          setAdminDashboard(dashboard);
+          setPendingOrganizers(organizers);
+          setAllOrganizers(all);
+          setEvents([]);
+          setTickets([]);
         } else {
           const [publishedEvents, myTickets] = await Promise.all([
             eventsService.getPublished(),
@@ -233,6 +249,9 @@ const App: React.FC = () => {
     setExplorerView('events');
     setShowWallet(false);
     setShowProfile(false);
+    setAdminDashboard(null);
+    setPendingOrganizers([]);
+    setAllOrganizers([]);
   };
 
   const scrollToSection = (id: string) => {
@@ -254,6 +273,72 @@ const App: React.FC = () => {
       setNotification('Ticket eliminado.');
     } catch (error: any) {
       setNotification(error?.message || 'No se pudo eliminar el ticket.');
+    }
+  };
+
+  const handleApproveOrganizer = async (organizerId: string) => {
+    try {
+      await adminService.approveOrganizer(organizerId);
+      setPendingOrganizers((prev) => prev.filter((org) => org.id !== organizerId));
+      setAllOrganizers((prev) => prev.map((org) => (org.id === organizerId ? { ...org, status: 'APPROVED' } : org)));
+      const dashboard = await adminService.getDashboard();
+      setAdminDashboard(dashboard);
+      setNotification('Organizador aprobado.');
+    } catch (error: any) {
+      setNotification(error?.message || 'No se pudo aprobar el organizador.');
+    }
+  };
+
+  const handleRejectOrganizer = async (organizerId: string) => {
+    const reason = window.prompt('Motivo de rechazo:');
+    if (!reason) {
+      return;
+    }
+    try {
+      await adminService.rejectOrganizer(organizerId, reason);
+      setPendingOrganizers((prev) => prev.filter((org) => org.id !== organizerId));
+      setAllOrganizers((prev) => prev.map((org) => (org.id === organizerId ? { ...org, status: 'REJECTED', rejection_reason: reason } : org)));
+      const dashboard = await adminService.getDashboard();
+      setAdminDashboard(dashboard);
+      setNotification('Organizador rechazado.');
+    } catch (error: any) {
+      setNotification(error?.message || 'No se pudo rechazar el organizador.');
+    }
+  };
+
+  const handleUpdateLimits = async (organizerId: string) => {
+    const target = allOrganizers.find((org) => org.id === organizerId);
+    if (!target) return;
+
+    const maxEvents = window.prompt('Máximo de eventos (vacío = sin límite):', target.limits?.max_events?.toString() ?? '');
+    if (maxEvents === null) return;
+    const maxTickets = window.prompt('Máximo de tickets por evento (vacío = sin límite):', target.limits?.max_tickets_per_event?.toString() ?? '');
+    if (maxTickets === null) return;
+    const maxMonthly = window.prompt('Máximo de volumen mensual (vacío = sin límite):', target.limits?.max_monthly_volume?.toString() ?? '');
+    if (maxMonthly === null) return;
+
+    const parseLimit = (value: string) => (value.trim() === '' ? null : Number(value));
+    const limits = {
+      max_events: parseLimit(maxEvents),
+      max_tickets_per_event: parseLimit(maxTickets),
+      max_monthly_volume: parseLimit(maxMonthly)
+    };
+
+    if (
+      (limits.max_events !== null && (!Number.isFinite(limits.max_events) || limits.max_events <= 0)) ||
+      (limits.max_tickets_per_event !== null && (!Number.isFinite(limits.max_tickets_per_event) || limits.max_tickets_per_event <= 0)) ||
+      (limits.max_monthly_volume !== null && (!Number.isFinite(limits.max_monthly_volume) || limits.max_monthly_volume <= 0))
+    ) {
+      setNotification('Los límites deben ser números positivos.');
+      return;
+    }
+
+    try {
+      const updated = await adminService.updateLimits(organizerId, limits);
+      setAllOrganizers((prev) => prev.map((org) => (org.id === organizerId ? updated : org)));
+      setNotification('Límites actualizados.');
+    } catch (error: any) {
+      setNotification(error?.message || 'No se pudieron actualizar los límites.');
     }
   };
 
@@ -444,12 +529,22 @@ const App: React.FC = () => {
           <div className="flex items-center gap-3 md:gap-6">
             
             <div className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold tracking-wider font-body ${
-              user.role === UserRole.ORGANIZER 
-                ? 'bg-lp-primary/10 border-lp-primary text-lp-primary' 
-                : 'bg-lp-accent/10 border-lp-accent text-lp-accent'
+              user.role === UserRole.ADMIN
+                ? 'bg-lp-warning/10 border-lp-warning text-lp-warning'
+                : user.role === UserRole.ORGANIZER 
+                  ? 'bg-lp-primary/10 border-lp-primary text-lp-primary' 
+                  : 'bg-lp-accent/10 border-lp-accent text-lp-accent'
             }`}>
-              {user.role === UserRole.ORGANIZER ? <ShieldCheck size={14} /> : <Map size={14} />}
-              {user.role === UserRole.ORGANIZER ? 'ORGANIZER' : 'EXPLORER'}
+              {user.role === UserRole.ADMIN
+                ? <ShieldCheck size={14} />
+                : user.role === UserRole.ORGANIZER
+                  ? <ShieldCheck size={14} />
+                  : <Map size={14} />}
+              {user.role === UserRole.ADMIN
+                ? 'ADMIN'
+                : user.role === UserRole.ORGANIZER
+                  ? 'ORGANIZER'
+                  : 'EXPLORER'}
             </div>
 
             <div className="h-8 w-px bg-lp-border hidden md:block"></div>
@@ -622,6 +717,17 @@ const App: React.FC = () => {
                  />
                )}
             </div>
+          )}
+
+          {user.role === UserRole.ADMIN && (
+            <AdminDashboard
+              data={adminDashboard}
+              pendingOrganizers={pendingOrganizers}
+              organizers={allOrganizers}
+              onApprove={handleApproveOrganizer}
+              onReject={handleRejectOrganizer}
+              onUpdateLimits={handleUpdateLimits}
+            />
           )}
 
         </div>

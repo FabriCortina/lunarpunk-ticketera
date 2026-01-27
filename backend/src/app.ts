@@ -14,6 +14,7 @@ import { eventRoutes } from './routes/event.routes';
 import { ticketRoutes } from './routes/ticket.routes';
 import { paymentRoutes } from './routes/payment.routes';
 import { webhookRoutes } from './routes/webhook.routes';
+import { adminRoutes } from './routes/admin.routes';
 import { AppError } from './utils/errors';
 import { ZodError } from 'zod';
 import db from './database/connection';
@@ -84,6 +85,7 @@ app.register(userRoutes, { prefix: '/api/users' });
 app.register(eventRoutes, { prefix: '/api/events' });
 app.register(ticketRoutes, { prefix: '/api/tickets' });
 app.register(paymentRoutes, { prefix: '/api/payments' });
+app.register(adminRoutes, { prefix: '/api/admin' });
 app.register(webhookRoutes, { prefix: '/webhooks' });
 
 const frontendDistClient = path.resolve(process.cwd(), 'frontend', 'dist', 'client');

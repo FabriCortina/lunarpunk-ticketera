@@ -30,14 +30,26 @@
 
 ### Roles de Usuario
 
-- **ORGANIZER**: Crea, edita y gestiona eventos. Puede publicar/ocultar eventos y ver estadísticas de ventas.
+- **ADMIN (Platform Admin)**: Gobierna la plataforma, aprueba/rechaza organizadores, ve métricas globales y audita pagos/tickets.
+- **ORGANIZER**: Crea, edita y gestiona eventos. Requiere estado **APPROVED** para operar.
 - **EXPLORER**: Explora eventos publicados, compra tickets y gestiona su billetera de tickets.
+
+### Flujo de aprobación y límites
+
+1. Un organizador se registra y queda en estado **PENDING_APPROVAL**.
+2. Un **ADMIN** revisa la solicitud en el dashboard y puede **aprobar**, **rechazar** o **suspender**.
+3. Solo los organizadores **APPROVED** pueden iniciar sesión y operar.
+4. El **ADMIN** puede definir límites por organizador:
+   - `max_events`
+   - `max_tickets_per_event`
+   - `max_monthly_volume`
 
 ## ✨ Características
 
 ### Backend
 - ✅ API RESTful con Fastify y TypeScript
 - ✅ Autenticación JWT segura
+- ✅ Aprobación de organizadores y rol ADMIN
 - ✅ Integración con MercadoPago para pagos
 - ✅ Webhooks para procesamiento de pagos
 - ✅ Códigos QR firmados con HMAC para validación segura
@@ -55,6 +67,7 @@
 - ✅ Gestión de estado local con React Hooks
 - ✅ Autenticación persistente
 - ✅ Panel de organizador y explorador
+- ✅ Dashboard ADMIN con KPIs y gestión de límites
 - ✅ Billetera de tickets con códigos QR
 - ✅ Modales y notificaciones
 
@@ -64,6 +77,7 @@
 - ✅ Códigos QR firmados criptográficamente
 - ✅ Variables de entorno para secretos
 - ✅ Protección CSRF mediante CORS
+- ✅ Auditoría de acciones ADMIN
 
 ## 🏗️ Arquitectura
 
@@ -242,7 +256,6 @@ Esto iniciará el frontend en `http://localhost:3000`
 
 ```bash
 npm run dev:backend
-npm run dev:backend
 ```
 
 #### Solo Frontend
@@ -310,9 +323,9 @@ lunarpunk-ticketera/
 ### Endpoints Principales
 
 #### Autenticación
-- `POST /api/auth/register` - Registrar nuevo usuario
-- `POST /api/auth/login` - Iniciar sesión
-- `GET /api/auth/me` - Obtener usuario actual
+- `POST /api/auth/register` - Registrar nuevo usuario (ORGANIZER queda PENDING_APPROVAL)
+- `POST /api/auth/login` - Iniciar sesión (ORGANIZER requiere APPROVED)
+- `GET /api/users/me` - Obtener usuario actual
 
 #### Eventos
 - `GET /api/events` - Listar eventos publicados
@@ -330,6 +343,14 @@ lunarpunk-ticketera/
 - `GET /api/tickets/event/:eventId` - Listar tickets de evento (requiere auth, ORGANIZER, owner del evento)
 - `POST /api/tickets/validate` - Validar ticket por QR (requiere auth, ORGANIZER)
 
+#### Admin (Platform)
+- `GET /api/admin/organizers?status=` - Listar organizadores por estado
+- `POST /api/admin/organizers/:id/approve` - Aprobar organizador
+- `POST /api/admin/organizers/:id/reject` - Rechazar organizador
+- `POST /api/admin/organizers/:id/suspend` - Suspender organizador
+- `POST /api/admin/organizers/:id/limits` - Configurar límites (max_events, max_tickets_per_event, max_monthly_volume)
+- `GET /api/admin/dashboard` - KPIs globales y auditoría
+
 **Detalle `GET /api/tickets/:id`**
 - Devuelve el ticket solo si pertenece al usuario autenticado; si no, responde `403`.
 - Incluye `status` y `qrPayload` (puede ser `null` si aún no está pagado).
@@ -339,8 +360,7 @@ lunarpunk-ticketera/
 - `POST /webhooks/mercadopago` - Webhook de MercadoPago
 
 #### Usuarios
-- `GET /api/users/:id` - Obtener perfil de usuario
-- `PUT /api/users/:id` - Actualizar perfil (requiere auth, owner)
+- `GET /api/users/me` - Obtener perfil de usuario
 
 #### Health Check
 - `GET /health` - Estado del servidor y base de datos

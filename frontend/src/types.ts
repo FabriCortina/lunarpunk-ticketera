@@ -4,6 +4,8 @@ export interface User {
   email: string;
   role: UserRole; // Role is now mandatory for access control
   avatar?: string; // Base64 string for profile picture
+  status?: OrganizerStatus | null;
+  limits?: OrganizerLimits | null;
 }
 
 export interface Event {
@@ -52,7 +54,62 @@ export interface Ticket {
 
 export enum UserRole {
   ORGANIZER = 'ORGANIZER',
-  EXPLORER = 'EXPLORER'
+  EXPLORER = 'EXPLORER',
+  ADMIN = 'ADMIN'
+}
+
+export type OrganizerStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+
+export interface OrganizerLimits {
+  max_events?: number | null;
+  max_tickets_per_event?: number | null;
+  max_monthly_volume?: number | null;
+}
+
+export interface OrganizerSummary {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+  status: OrganizerStatus | null;
+  approved_at?: string | null;
+  approved_by_admin_id?: string | null;
+  rejection_reason?: string | null;
+  limits?: OrganizerLimits | null;
+}
+
+export interface AdminDashboardData {
+  kpis: {
+    organizers: number;
+    organizersPending: number;
+    events: number;
+    tickets: number;
+    revenue: number;
+    anchoring: number;
+  };
+  recentTickets: Array<{
+    id: string;
+    status: string;
+    created_at: string;
+    mp_payment_id?: string | null;
+    event_title?: string | null;
+    explorer_email?: string | null;
+    amount?: number | null;
+  }>;
+  recentPayments: Array<{
+    id: string;
+    created_at: string;
+    mp_payment_id?: string | null;
+    event_title?: string | null;
+    explorer_email?: string | null;
+    amount?: number | null;
+  }>;
+  antifraudFlags: Array<{
+    id: string;
+    created_at: string;
+    event_title?: string | null;
+    explorer_email?: string | null;
+  }>;
 }
 
 export interface NavItem {
