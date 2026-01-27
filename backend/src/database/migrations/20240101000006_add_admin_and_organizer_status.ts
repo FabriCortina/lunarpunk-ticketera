@@ -21,12 +21,7 @@ export async function up(knex: Knex): Promise<void> {
   `);
 
   await knex.schema.alterTable('users', (table) => {
-    table
-      .enu('status', ['PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'SUSPENDED'], {
-        useNative: true,
-        enumName: 'organizer_status'
-      })
-      .nullable();
+    table.specificType('status', 'organizer_status').nullable();
     table.timestamp('approved_at');
     table.uuid('approved_by_admin_id').references('id').inTable('users').onDelete('SET NULL');
     table.text('rejection_reason');
