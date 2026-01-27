@@ -6,7 +6,15 @@ export async function up(knex: Knex): Promise<void> {
   await knex.raw(`
     DO $$
     BEGIN
-      CREATE TYPE organizer_status AS ENUM ('PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'SUSPENDED');
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_type t
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'organizer_status'
+          AND n.nspname = current_schema()
+      ) THEN
+        CREATE TYPE organizer_status AS ENUM ('PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'SUSPENDED');
+      END IF;
     EXCEPTION
       WHEN duplicate_object THEN NULL;
     END$$;
