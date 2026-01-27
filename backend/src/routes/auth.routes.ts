@@ -23,6 +23,12 @@ export async function authRoutes(app: FastifyInstance) {
   const router = app.withTypeProvider<ZodTypeProvider>();
 
   router.post('/register', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute'
+      }
+    },
     schema: {
       body: registerSchema
     }
@@ -53,6 +59,12 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   router.post('/login', {
+    config: {
+      rateLimit: {
+        max: 15,
+        timeWindow: '1 minute'
+      }
+    },
     schema: {
       body: loginSchema
     }
