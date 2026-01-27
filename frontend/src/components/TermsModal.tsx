@@ -8,8 +8,14 @@ interface TermsModalProps {
 
 export const TermsModal: React.FC<TermsModalProps> = ({ onClose }) => {
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="bg-[#050b14] border border-lp-accent/30 w-full max-w-3xl rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,240,255,0.15)] max-h-[90vh] flex flex-col">
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#050b14] border border-lp-accent/30 w-full max-w-3xl rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,240,255,0.15)] max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <h2 className="text-xl font-title text-white">Términos y condiciones</h2>
           <button

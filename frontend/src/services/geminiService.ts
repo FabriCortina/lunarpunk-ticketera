@@ -2,11 +2,15 @@ import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export const generateEventDescription = async (title: string, location: string): Promise<string> => {
+export const generateEventDescription = async (
+  title: string,
+  location: string,
+  userDescription: string
+): Promise<string> => {
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Escribe una descripción corta, emocionante y futurista (estilo cyberpunk/lunarpunk) de un párrafo para un evento llamado "${title}" que tendrá lugar en "${location}". Usa un tono misterioso y atractivo.`,
+      contents: `Escribe una descripción breve (6–8 líneas) para un evento llamado "${title}" en "${location}". Tono: divertido, atractivo y misterioso. Integra y mejora este texto base del organizador: "${userDescription}". Evita repetir frases y usa español neutro.`,
     });
     
     return response.text || "No se pudo generar la descripción.";

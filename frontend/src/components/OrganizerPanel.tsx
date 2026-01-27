@@ -122,7 +122,11 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
          finalTitle = await suggestEventTitle("Evento Futuro");
     }
 
-    const desc = await generateEventDescription(finalTitle, formData.location || 'Metaverso');
+    const desc = await generateEventDescription(
+      finalTitle,
+      formData.location || 'Metaverso',
+      formData.description || 'Sin descripción base.'
+    );
     
     setFormData(prev => ({
       ...prev,
@@ -207,14 +211,14 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
       
       <div className="flex items-center justify-between mb-8">
         {/* H2 Title (28-32px) -> text-3xl is 30px */}
-        <h2 className="text-3xl font-title font-bold text-white flex items-center gap-3">
+          <h2 className="text-3xl font-title font-bold text-white flex items-center gap-3">
           {editingEvent ? (
             <>
-              <RotateCcw className="text-lp-primary" /> Editar Evento
+              <RotateCcw className="text-lp-primary" /> Editar Experiencia
             </>
           ) : (
             <>
-              <Sparkles className="text-lp-accent" /> Nuevo Evento
+              <Sparkles className="text-lp-accent" /> Nueva Experiencia
             </>
           )}
         </h2>
@@ -228,7 +232,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
               isLoading={loading}
               className="text-xs font-body"
             >
-              <Sparkles size={16} /> LunarIA
+              <Sparkles size={16} /> Lunar IA
             </Button>
           )}
           {editingEvent && onCancelEdit && (
@@ -243,7 +247,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Nombre del Evento</label>
+            <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Experiencia</label>
             <div className="relative">
               <input
                 type="text"
@@ -318,14 +322,14 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
         </div>
 
         <div className="space-y-2">
-          <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Descripción {editingEvent ? '' : '(Puedes enriquecerla con LunarIA)'}</label>
+          <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Cuenta sobre la experiencia {editingEvent ? '' : '(Puedes enriquecerla con Lunar IA)'}</label>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleInputChange}
             rows={4}
             className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors font-body"
-            placeholder="Describe la experiencia..."
+            placeholder="Describe la experiencia"
           />
         </div>
 
@@ -348,7 +352,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Tipos de tickets</label>
+            <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Tipos de aventuras</label>
             {!editingEvent && (
               <Button type="button" variant="secondary" onClick={addTicketType} className="text-xs font-body">
                 + Agregar tipo
@@ -371,7 +375,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] uppercase tracking-wider text-lp-muted font-body">Descripción</label>
+                <label className="text-[10px] uppercase tracking-wider text-lp-muted font-body">Cuenta sobre la aventura</label>
                 <textarea
                   value={type.description}
                   onChange={(e) => updateTicketType(index, 'description', e.target.value)}
@@ -433,7 +437,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
             {editingEvent ? (
               <><Save size={20} /> Actualizar Evento</>
             ) : (
-              'Publicar evento a la comunidad'
+              'Publicar experiencia a la comunidad'
             )}
           </Button>
         </div>

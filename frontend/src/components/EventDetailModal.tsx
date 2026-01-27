@@ -35,8 +35,14 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
   }, [event.id, onSelectType, selectedType?.name]);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="bg-[#050b14] border border-lp-accent/30 w-full max-w-4xl rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,240,255,0.15)] flex flex-col md:flex-row max-h-[90vh]">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#050b14] border border-lp-accent/30 w-full max-w-4xl rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,240,255,0.15)] flex flex-col md:flex-row max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Image Column */}
         <div className="w-full md:w-2/5 h-48 md:h-auto relative">
