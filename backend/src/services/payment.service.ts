@@ -1,8 +1,10 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import { FastifyBaseLogger } from 'fastify';
 import { TicketRepository } from '../repositories/ticket.repository';
 import { env } from '../config/env';
 import { AppError } from '../utils/errors';
 import { generateSignedQrPayload } from '../utils/crypto';
+import { verifyMercadoPagoSignature } from '../utils/mercadopago';
 
 export class PaymentService {
   private mpClient: MercadoPagoConfig;
@@ -86,9 +88,12 @@ export class PaymentService {
     }
   }
 
-  async processWebhook(query: any, body: any) {
-    console.log('🔹 Webhook received:', JSON.stringify(body));
-
+  async processWebhook(
+    query: any,
+    _body: any,
+    headers: Record<string, string | string[] | undefined>,
+    logger?: FastifyBaseLogger
+  ) {
     const topic = query.topic || query.type;
     const id = query.id || query['data.id'];
 
@@ -96,46 +101,83 @@ export class PaymentService {
       return;
     }
 
+    const signature = verifyMercadoPagoSignature(headers, String(id));
+    if (!signature.ok) {
+      logger?.warn({ reason: signature.reason, requestId: signature.requestId }, 'Invalid MP webhook signature');
+      throw new AppError('Invalid webhook signature', 401);
+    }
+
+    if (signature.skipped) {
+      logger?.warn('MP webhook signature verification skipped (secret not configured)');
+    }
+
     try {
       const payment = new Payment(this.mpClient);
       const paymentInfo = await payment.get({ id: id });
 
-      console.log(`🔹 Payment ${id} status: ${paymentInfo.status}`);
-
       const ticketId = paymentInfo.external_reference;
-      
       if (!ticketId) {
-        console.warn('⚠️ Payment missing external_reference (Ticket ID)');
+        logger?.warn({ paymentId: id }, 'Payment missing external_reference');
         return;
       }
 
-      if (paymentInfo.status === 'approved') {
-        const ticket = await this.ticketRepository.findByIdWithEvent(ticketId);
-
-        if (!ticket) {
-            console.error(`❌ Ticket not found for ID: ${ticketId}`);
-            return;
-        }
-
-        if (ticket.status === 'PAID') {
-            console.log(`ℹ️ Ticket ${ticketId} is already PAID. Skipping.`);
-            return;
-        }
-
-        // Generar QR Payload Seguro con HMAC
-        const qrPayload = generateSignedQrPayload(ticketId, ticket.event_id);
-
-        await this.ticketRepository.update(ticketId, {
-            status: 'PAID',
-            mp_payment_id: id.toString(),
-            qr_payload: qrPayload
-        });
-
-        console.log(`✅ Ticket ${ticketId} updated to PAID with secure QR.`);
+      if (paymentInfo.status !== 'approved') {
+        logger?.info({ paymentId: id, status: paymentInfo.status }, 'Payment not approved');
+        return;
       }
 
+      const ticket = await this.ticketRepository.findByIdWithEvent(ticketId);
+      if (!ticket) {
+        logger?.warn({ ticketId, paymentId: id }, 'Ticket not found for payment');
+        return;
+      }
+
+      if (ticket.mp_payment_id && ticket.mp_payment_id !== String(id)) {
+        logger?.warn({ ticketId, paymentId: id }, 'Ticket already linked to another payment');
+        return;
+      }
+
+      if (ticket.status === 'PAID') {
+        logger?.info({ ticketId, paymentId: id }, 'Ticket already PAID');
+        return;
+      }
+
+      const expectedAmount = Number(ticket.ticket_type_price ?? ticket.event_price);
+      const receivedAmount = Number(paymentInfo.transaction_amount);
+      if (!Number.isFinite(receivedAmount) || Math.abs(receivedAmount - expectedAmount) > 0.01) {
+        logger?.warn({ ticketId, paymentId: id, expectedAmount, receivedAmount }, 'Payment amount mismatch');
+        return;
+      }
+
+      if (paymentInfo.currency_id && paymentInfo.currency_id !== 'ARS') {
+        logger?.warn({ ticketId, paymentId: id, currency: paymentInfo.currency_id }, 'Payment currency mismatch');
+        return;
+      }
+
+      if (paymentInfo.metadata?.ticket_id && paymentInfo.metadata.ticket_id !== ticketId) {
+        logger?.warn({ ticketId, paymentId: id }, 'Payment metadata ticket_id mismatch');
+        return;
+      }
+
+      if (paymentInfo.metadata?.explorer_id && paymentInfo.metadata.explorer_id !== ticket.explorer_id) {
+        logger?.warn({ ticketId, paymentId: id }, 'Payment metadata explorer_id mismatch');
+        return;
+      }
+
+      const qrPayload = generateSignedQrPayload(ticketId, ticket.event_id);
+      const updated = await this.ticketRepository.markAsPaid(ticketId, {
+        mp_payment_id: String(id),
+        qr_payload: qrPayload
+      });
+
+      if (!updated) {
+        logger?.info({ ticketId, paymentId: id }, 'Ticket already updated by another process');
+        return;
+      }
+
+      logger?.info({ ticketId, paymentId: id }, 'Ticket updated to PAID');
     } catch (error) {
-      console.error('❌ Error processing webhook:', error);
+      logger?.error({ err: error, paymentId: id }, 'Error processing MP webhook');
     }
   }
 }

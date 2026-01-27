@@ -40,7 +40,16 @@ export const verifyQrPayload = (payloadString: string): QrPayload | null => {
       return null;
     }
 
-    return JSON.parse(decoded) as QrPayload;
+    const payload = JSON.parse(decoded) as QrPayload;
+    if (env.QR_TTL_SECONDS > 0) {
+      const now = Date.now();
+      const expiresAt = payload.iat + env.QR_TTL_SECONDS * 1000;
+      if (!payload.iat || expiresAt < now) {
+        return null;
+      }
+    }
+
+    return payload;
   } catch {
     return null;
   }

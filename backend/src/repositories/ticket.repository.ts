@@ -101,6 +101,17 @@ export class TicketRepository {
     await this.db('tickets').where({ id }).del();
   }
 
+  async markAsPaid(id: string, data: Partial<TicketEntity>): Promise<TicketEntity | undefined> {
+    const [ticket] = await this.db('tickets')
+      .where({ id, status: 'PENDING' })
+      .update({
+        ...data,
+        status: 'PAID'
+      })
+      .returning('*');
+    return ticket;
+  }
+
   async markAsValidated(id: string): Promise<TicketEntity | undefined> {
     const [ticket] = await this.db('tickets')
       .where({ id, status: 'PAID' })

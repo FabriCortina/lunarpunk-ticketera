@@ -12,7 +12,7 @@ export class PaymentController {
   };
 
   handleWebhook = async (req: FastifyRequest, reply: FastifyReply) => {
-    await this.paymentService.processWebhook(req.query, req.body);
+    await this.paymentService.processWebhook(req.query, req.body, req.headers, req.log);
     return reply.status(200).send({ received: true });
   };
 }
