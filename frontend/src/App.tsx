@@ -7,6 +7,7 @@ import { ExplorerTicketList } from './components/ExplorerTicketList';
 import { TicketWallet } from './components/TicketWallet'; 
 import { ProfileModal } from './components/ProfileModal';
 import { AuthScreen } from './components/AuthScreen';
+import { TermsModal } from './components/TermsModal';
 import { Button } from './components/Button';
 import { BrandLogo } from './components/BrandLogo';
 import { Moon } from './components/Moon';
@@ -26,6 +27,7 @@ const App: React.FC = () => {
   const [dataError, setDataError] = useState<string | null>(null);
   const [showWallet, setShowWallet] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'failure' | 'pending' | null>(null);
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
@@ -407,7 +409,8 @@ const App: React.FC = () => {
     return (
       <>
         <MoonCursor />
-        <AuthScreen onAuthSuccess={handleAuthSuccess} />
+        <AuthScreen onAuthSuccess={handleAuthSuccess} onOpenTerms={() => setShowTerms(true)} />
+        {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
       </>
     );
   }
@@ -627,9 +630,16 @@ const App: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-lp-border py-8 mt-12 bg-lp-bg">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-lp-muted font-body text-xs">
-            © 2077 LUNARPUNK TICKETERA.
-          </p>
+          <div className="flex flex-col items-center gap-2 text-xs font-body text-lp-muted">
+            <span>© 2077 LUNARPUNK TICKETERA.</span>
+            <button
+              type="button"
+              onClick={() => setShowTerms(true)}
+              className="text-lp-accent hover:text-white underline underline-offset-2"
+            >
+              Términos y condiciones
+            </button>
+          </div>
         </div>
       </footer>
 
@@ -651,6 +661,8 @@ const App: React.FC = () => {
           onUpdate={handleUpdateProfile}
         />
       )}
+
+      {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
 
       {/* Notification Toast */}
       {notification && (

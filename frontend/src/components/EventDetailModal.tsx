@@ -116,13 +116,15 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                           : 'border-white/10 bg-slate-900/40 hover:border-lp-accent/40'
                       }`}
                     >
-                      <div className="text-center">
-                        <span className="text-white font-body font-bold block">{type.name}</span>
-                        <span className="text-lp-accent font-body font-bold block">${type.price}</span>
+                      <div className="flex items-center gap-4">
+                        <div className="w-32 text-center">
+                          <span className="text-white font-body font-bold block">{type.name}</span>
+                          <span className="text-lp-accent font-body font-bold block">${type.price}</span>
+                        </div>
+                        <p className="flex-1 text-xs text-slate-400 font-body text-center break-words">
+                          {type.description}
+                        </p>
                       </div>
-                      <p className="text-xs text-slate-400 mt-2 font-body text-center break-words">
-                        {type.description}
-                      </p>
                     </button>
                   ))}
                 </div>
