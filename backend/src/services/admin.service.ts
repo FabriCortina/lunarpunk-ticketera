@@ -149,18 +149,26 @@ export class AdminService {
 
   async getDashboard() {
     const [
-      [{ totalOrganizers }],
-      [{ pendingOrganizers }],
-      [{ totalEvents }],
-      [{ totalTickets }],
-      [{ revenue }]
+      totalOrganizersRow,
+      pendingOrganizersRow,
+      totalEventsRow,
+      totalTicketsRow,
+      revenueRow
     ] = await Promise.all([
-      db('users').where({ role: 'ORGANIZER' }).count<{ totalOrganizers: string }>('id as totalOrganizers'),
+      db('users')
+        .where({ role: 'ORGANIZER' })
+        .count<{ totalOrganizers: string }>('id as totalOrganizers')
+        .first(),
       db('users')
         .where({ role: 'ORGANIZER', status: 'PENDING_APPROVAL' })
-        .count<{ pendingOrganizers: string }>('id as pendingOrganizers'),
-      db('events').count<{ totalEvents: string }>('id as totalEvents'),
-      db('tickets').count<{ totalTickets: string }>('id as totalTickets'),
+        .count<{ pendingOrganizers: string }>('id as pendingOrganizers')
+        .first(),
+      db('events')
+        .count<{ totalEvents: string }>('id as totalEvents')
+        .first(),
+      db('tickets')
+        .count<{ totalTickets: string }>('id as totalTickets')
+        .first(),
       db('tickets')
         .leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id')
         .leftJoin('events', 'tickets.event_id', 'events.id')
@@ -168,7 +176,14 @@ export class AdminService {
         .sum<{ revenue: string }>(
           db.raw('COALESCE(ticket_types.price, events.price) as revenue')
         )
+        .first()
     ]);
+
+    const totalOrganizers = totalOrganizersRow?.totalOrganizers;
+    const pendingOrganizers = pendingOrganizersRow?.pendingOrganizers;
+    const totalEvents = totalEventsRow?.totalEvents;
+    const totalTickets = totalTicketsRow?.totalTickets;
+    const revenue = revenueRow?.revenue;
 
     const approvedOrganizersCount = await db('users')
       .where({ role: 'ORGANIZER', status: 'APPROVED' })

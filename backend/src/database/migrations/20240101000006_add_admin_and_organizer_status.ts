@@ -27,7 +27,7 @@ export async function up(knex: Knex): Promise<void> {
 
   await knex('users')
     .where({ role: 'ORGANIZER' })
-    .andWhereNull('status')
+    .whereNull('status')
     .update({ status: 'APPROVED' });
 
   await knex.schema.createTable('admin_actions', (table) => {
