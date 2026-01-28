@@ -45,13 +45,20 @@ export async function adminRoutes(app: FastifyInstance) {
         throw new AppError('User not found', 404);
       }
 
-      await db('users')
-        .where({ id: user.id })
-        .update({ role: 'ADMIN', status: null });
+      try {
+        await db('users')
+          .where({ id: user.id })
+          .update({ role: 'ADMIN', status: null });
+      } catch (error) {
+        req.log.error({ err: error }, 'Bootstrap admin update failed, retrying without status');
+        await db('users')
+          .where({ id: user.id })
+          .update({ role: 'ADMIN' });
+      }
 
       const updated = await db('users')
         .where({ id: user.id })
-        .select('id', 'name', 'email', 'role', 'status')
+        .select('id', 'name', 'email', 'role')
         .first();
 
       return reply.send({ user: updated });
