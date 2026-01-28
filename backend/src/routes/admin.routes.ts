@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { AdminService } from '../services/admin.service';
 import { AdminController } from '../controllers/admin.controller';
+import { env } from '../config/env';
+import db from '../database/connection';
+import { AppError } from '../utils/errors';
 
 const statusSchema = z.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'SUSPENDED']);
 
@@ -11,6 +14,44 @@ export async function adminRoutes(app: FastifyInstance) {
   const router = app.withTypeProvider<ZodTypeProvider>();
   const adminService = new AdminService();
   const adminController = new AdminController(adminService);
+
+  router.post(
+    '/bootstrap',
+    {
+      schema: {
+        body: z.object({
+          email: z.string().email(),
+          secret: z.string().min(1)
+        })
+      }
+    },
+    async (req, reply) => {
+      if (!env.ADMIN_BOOTSTRAP_SECRET) {
+        throw new AppError('Bootstrap disabled', 404);
+      }
+
+      const { email, secret } = req.body as { email: string; secret: string };
+      if (secret !== env.ADMIN_BOOTSTRAP_SECRET) {
+        throw new AppError('Invalid bootstrap secret', 403);
+      }
+
+      const existingAdmin = await db('users').where({ role: 'ADMIN' }).first();
+      if (existingAdmin) {
+        throw new AppError('Admin already exists', 409);
+      }
+
+      const [user] = await db('users')
+        .where({ email })
+        .update({ role: 'ADMIN', status: null })
+        .returning(['id', 'name', 'email', 'role', 'status']);
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      return reply.send({ user });
+    }
+  );
 
   router.register(async (protectedRouter) => {
     protectedRouter.addHook('preHandler', authenticate);

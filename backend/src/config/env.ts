@@ -24,6 +24,7 @@ const envSchema = z.object({
   MP_WEBHOOK_SECRET: z.string().optional(),
   MP_WEBHOOK_TOLERANCE_SECONDS: z.coerce.number().int().min(30).default(300),
   API_KEY: z.string().optional(),
+  ADMIN_BOOTSTRAP_SECRET: z.string().optional(),
   
   // App Config
   BACKEND_PUBLIC_BASE_URL: z.string().url().default('http://localhost:3100'),
