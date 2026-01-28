@@ -39,4 +39,10 @@ export class EventController {
     await this.eventService.deleteEvent(id, req.user!.id);
     return reply.status(204).send();
   };
+
+  getMetrics = async (req: FastifyRequest, reply: FastifyReply) => {
+    const { id } = req.params as { id: string };
+    const metrics = await this.eventService.getOrganizerEventMetrics(id, req.user!.id);
+    return reply.status(200).send(metrics);
+  };
 }

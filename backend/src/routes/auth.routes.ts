@@ -11,7 +11,16 @@ const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
-  role: z.enum(['ORGANIZER', 'EXPLORER'])
+  role: z.enum(['ORGANIZER', 'EXPLORER']),
+  cuitCuil: z.string().min(8).optional()
+}).superRefine((data, ctx) => {
+  if ((data.role === 'EXPLORER' || data.role === 'ORGANIZER') && !data.cuitCuil) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'CUIT/CUIL is required',
+      path: ['cuitCuil']
+    });
+  }
 });
 
 const loginSchema = z.object({
@@ -33,7 +42,7 @@ export async function authRoutes(app: FastifyInstance) {
       body: registerSchema
     }
   }, async (req: FastifyRequest<{ Body: z.infer<typeof registerSchema> }>, reply) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, cuitCuil } = req.body;
 
     const existingUser = await db('users').where({ email }).first();
     if (existingUser) {
@@ -48,7 +57,8 @@ export async function authRoutes(app: FastifyInstance) {
         email,
         password: hashedPassword,
         role,
-        status: role === 'ORGANIZER' ? 'PENDING_APPROVAL' : null
+        status: role === 'ORGANIZER' ? 'PENDING_APPROVAL' : null,
+        cuit_cuil: cuitCuil?.trim() || null
       })
       .returning(['id', 'name', 'email', 'role', 'status']);
 

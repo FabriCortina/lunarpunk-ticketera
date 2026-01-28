@@ -9,13 +9,15 @@ interface OrganizerEventListProps {
   onEdit: (event: Event) => void;
   onDelete: (eventId: string) => void;
   onTogglePublish: (event: Event) => void;
+  onViewMetrics: (event: Event) => void;
 }
 
 export const OrganizerEventList: React.FC<OrganizerEventListProps> = ({ 
   events, 
   onEdit, 
   onDelete,
-  onTogglePublish 
+  onTogglePublish,
+  onViewMetrics
 }) => {
 
   if (events.length === 0) {
@@ -83,7 +85,7 @@ export const OrganizerEventList: React.FC<OrganizerEventListProps> = ({
           </div>
 
           {/* Actions Section */}
-          <div className="flex flex-row md:flex-col justify-center gap-3 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-6 min-w-[140px]">
+          <div className="flex flex-row md:flex-col justify-center gap-3 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-6 min-w-[160px]">
              <Button 
                 onClick={() => onEdit(event)} 
                 variant="secondary" 
@@ -98,6 +100,14 @@ export const OrganizerEventList: React.FC<OrganizerEventListProps> = ({
                 className={`flex-1 md:flex-none !py-2 text-xs border border-transparent font-body ${event.isPublished ? 'text-yellow-400 hover:border-yellow-400/50' : 'text-green-400 hover:border-green-400/50'}`}
              >
                 {event.isPublished ? <><EyeOff size={14} /> Ocultar</> : <><Eye size={14} /> Publicar</>}
+             </Button>
+
+             <Button
+               onClick={() => onViewMetrics(event)}
+               variant="secondary"
+               className="flex-1 md:flex-none !py-2 text-xs font-body"
+             >
+               Métricas
              </Button>
 
              <Button 

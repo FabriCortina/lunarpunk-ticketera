@@ -21,7 +21,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onOpenTer
     lastName: '',
     email: '',
     password: '',
-    role: UserRole.EXPLORER
+    role: UserRole.EXPLORER,
+    cuitCuil: ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,11 +50,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onOpenTer
         if (!formData.firstName || !formData.lastName) {
            throw new Error("Nombre y Apellido son requeridos.");
         }
+        if ((formData.role === UserRole.EXPLORER || formData.role === UserRole.ORGANIZER) && !formData.cuitCuil.trim()) {
+          throw new Error("CUIT/CUIL es requerido.");
+        }
         if (formData.password.length < 8) {
           throw new Error("La contraseña debe tener al menos 8 caracteres.");
         }
         const fullName = `${formData.firstName} ${formData.lastName}`;
-        user = await authService.register(fullName, formData.email, formData.password, formData.role);
+        user = await authService.register(
+          fullName,
+          formData.email,
+          formData.password,
+          formData.role,
+          formData.cuitCuil.trim()
+        );
       }
       onAuthSuccess(user);
     } catch (err: any) {
@@ -152,6 +162,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onOpenTer
                   />
                 </div>
               </div>
+
+              {(formData.role === UserRole.EXPLORER || formData.role === UserRole.ORGANIZER) && (
+                <div className="space-y-1">
+                  <label className="text-xs uppercase tracking-wider text-lp-muted ml-1 font-body">CUIT / CUIL</label>
+                  <input
+                    type="text"
+                    name="cuitCuil"
+                    value={formData.cuitCuil}
+                    onChange={handleChange}
+                    className="w-full bg-lp-surface border border-lp-border rounded p-3 text-white focus:border-lp-accent focus:outline-none transition-all placeholder:text-gray-600 font-body"
+                    placeholder="20-12345678-9"
+                    required
+                  />
+                </div>
+              )}
             </>
           )}
 
@@ -227,7 +252,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onOpenTer
             onClick={() => {
               setIsLogin(!isLogin);
               setError(null);
-              setFormData({ firstName: '', lastName: '', email: '', password: '', role: UserRole.EXPLORER });
+              setFormData({ firstName: '', lastName: '', email: '', password: '', role: UserRole.EXPLORER, cuitCuil: '' });
               setTermsAccepted(false);
             }}
             className="text-lp-accent hover:text-white font-bold text-sm mt-1 uppercase tracking-wider transition-colors font-body"
