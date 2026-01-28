@@ -65,6 +65,17 @@ export async function eventRoutes(app: FastifyInstance) {
       eventController.togglePublish
     );
 
+    protectedRouter.get(
+      '/:id/metrics',
+      {
+        preHandler: authorize(['ORGANIZER']),
+        schema: {
+          params: z.object({ id: z.string().uuid() })
+        }
+      },
+      eventController.getMetrics
+    );
+
     protectedRouter.delete(
       '/:id',
       {

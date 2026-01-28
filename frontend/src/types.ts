@@ -6,6 +6,7 @@ export interface User {
   avatar?: string; // Base64 string for profile picture
   status?: OrganizerStatus | null;
   limits?: OrganizerLimits | null;
+  cuitCuil?: string | null;
 }
 
 export interface Event {
@@ -110,6 +111,48 @@ export interface AdminDashboardData {
     event_title?: string | null;
     explorer_email?: string | null;
   }>;
+}
+
+export interface EventMetrics {
+  event: {
+    id: string;
+    title: string;
+    datetime: string;
+    location: string;
+    capacity: number;
+  };
+  counts: {
+    reserved: number;
+    paid: number;
+    validated: number;
+    canceled: number;
+    purchased: number;
+    totalTickets: number;
+    uniqueExplorers: number;
+  };
+  rates: {
+    occupancyRate: number;
+    attendanceRate: number;
+  };
+  revenue: number;
+  noShow: number;
+  byTicketType: Array<{
+    id: string;
+    name: string;
+    price: number;
+    count: number;
+  }>;
+}
+
+export interface TicketValidationResult {
+  valid: boolean;
+  message: string;
+  validatedAt?: string;
+  buyer?: {
+    name: string | null;
+    email: string | null;
+    cuitCuil: string | null;
+  };
 }
 
 export interface NavItem {

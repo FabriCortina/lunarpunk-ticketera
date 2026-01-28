@@ -1,5 +1,5 @@
 import { del, get, post } from '../lib/api';
-import { Ticket } from '../types';
+import { Ticket, TicketValidationResult } from '../types';
 
 export const ticketsService = {
   reserveTicket: async (eventId: string, ticketTypeId?: string): Promise<Ticket> => {
@@ -26,8 +26,8 @@ export const ticketsService = {
   getEventTickets: async (eventId: string) =>
     get(`/api/tickets/event/${eventId}`),
 
-  validateTicket: async (qrPayload: string) =>
-    post('/api/tickets/validate', { qrPayload })
+  validateTicket: async (qrPayload: string): Promise<TicketValidationResult> =>
+    post<TicketValidationResult>('/api/tickets/validate', { qrPayload })
 };
 
 const mapTicket = (ticket: any): Ticket => ({

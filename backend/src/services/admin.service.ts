@@ -156,11 +156,13 @@ export class AdminService {
         .where('tickets.status', 'PAID');
       if (useTicketTypes) {
         query.leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id');
-        query.sum<{ revenue: string }>(
-          db.raw('COALESCE(ticket_types.price, events.price) as revenue')
-        );
+        query.sum<{ revenue: string }>({
+          revenue: db.raw('COALESCE(ticket_types.price, events.price)')
+        });
       } else {
-        query.sum<{ revenue: string }>(db.raw('events.price as revenue'));
+        query.sum<{ revenue: string }>({
+          revenue: db.raw('events.price')
+        });
       }
       return query;
     };

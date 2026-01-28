@@ -19,6 +19,9 @@ export interface TicketWithEvent extends TicketEntity {
   event_price: number;
   event_description: string;
   organizer_id: string;
+  explorer_name?: string | null;
+  explorer_email?: string | null;
+  explorer_cuit_cuil?: string | null;
   ticket_type_name?: string | null;
   ticket_type_description?: string | null;
   ticket_type_price?: number | null;
@@ -78,6 +81,7 @@ export class TicketRepository {
   async findByIdWithEvent(id: string): Promise<TicketWithEvent | undefined> {
     return this.db('tickets')
       .join('events', 'tickets.event_id', 'events.id')
+      .leftJoin('users as explorers', 'tickets.explorer_id', 'explorers.id')
       .leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id')
       .select(
         'tickets.*',
@@ -85,6 +89,9 @@ export class TicketRepository {
         'events.price as event_price',
         'events.description as event_description',
         'events.organizer_id',
+        'explorers.name as explorer_name',
+        'explorers.email as explorer_email',
+        'explorers.cuit_cuil as explorer_cuit_cuil',
         'ticket_types.name as ticket_type_name',
         'ticket_types.description as ticket_type_description',
         'ticket_types.price as ticket_type_price'
@@ -121,5 +128,71 @@ export class TicketRepository {
       })
       .returning('*');
     return ticket;
+  }
+
+  async getEventStatusCounts(eventId: string) {
+    const rows = await this.db('tickets')
+      .where({ event_id: eventId })
+      .select('status')
+      .count('id as count')
+      .groupBy('status');
+    return rows.reduce<Record<string, number>>((acc, row: any) => {
+      acc[row.status] = Number(row.count || 0);
+      return acc;
+    }, {});
+  }
+
+  async getEventRevenue(eventId: string) {
+    const hasTicketTypes = await this.db.schema.withSchema('public').hasTable('ticket_types');
+    const query = this.db('tickets')
+      .leftJoin('events', 'tickets.event_id', 'events.id')
+      .where({ 'tickets.event_id': eventId })
+      .whereIn('tickets.status', ['PAID', 'VALIDATED']);
+
+    if (hasTicketTypes) {
+      query.leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id');
+      query.sum({
+        revenue: this.db.raw('COALESCE(ticket_types.price, events.price)')
+      });
+    } else {
+      query.sum({
+        revenue: this.db.raw('events.price')
+      });
+    }
+
+    const result = await query.first();
+    return Number(result?.revenue || 0);
+  }
+
+  async getEventTicketTypesBreakdown(eventId: string) {
+    const hasTicketTypes = await this.db.schema.withSchema('public').hasTable('ticket_types');
+    if (!hasTicketTypes) return [];
+
+    const rows = await this.db('tickets')
+      .leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id')
+      .where({ 'tickets.event_id': eventId })
+      .select(
+        'ticket_types.id',
+        'ticket_types.name',
+        'ticket_types.price'
+      )
+      .count('tickets.id as count')
+      .groupBy('ticket_types.id', 'ticket_types.name', 'ticket_types.price')
+      .orderBy('ticket_types.name', 'asc');
+
+    return rows.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      price: Number(row.price || 0),
+      count: Number(row.count || 0)
+    }));
+  }
+
+  async getEventUniqueExplorers(eventId: string) {
+    const result = await this.db('tickets')
+      .where({ event_id: eventId })
+      .countDistinct('explorer_id as count')
+      .first();
+    return Number(result?.count || 0);
   }
 }

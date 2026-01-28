@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole, Event, Ticket, TicketStatus, User, AdminDashboardData, OrganizerSummary } from './types';
+import { UserRole, Event, Ticket, TicketStatus, User, AdminDashboardData, OrganizerSummary, EventMetrics, TicketValidationResult } from './types';
 import { OrganizerPanel } from './components/OrganizerPanel';
 import { OrganizerEventList } from './components/OrganizerEventList';
 import { BuyerPanel } from './components/BuyerPanel';
@@ -13,6 +13,7 @@ import { BrandLogo } from './components/BrandLogo';
 import { Moon } from './components/Moon';
 import { MoonCursor } from './components/MoonCursor';
 import { AdminDashboard } from './components/AdminDashboard';
+import { OrganizerEventMetricsModal } from './components/OrganizerEventMetricsModal';
 import { authService } from './services/authService';
 import { eventsService } from './services/eventsService';
 import { ticketsService } from './services/ticketsService';
@@ -36,6 +37,12 @@ const App: React.FC = () => {
   const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
   const [pendingOrganizers, setPendingOrganizers] = useState<OrganizerSummary[]>([]);
   const [allOrganizers, setAllOrganizers] = useState<OrganizerSummary[]>([]);
+  const [metricsEvent, setMetricsEvent] = useState<Event | null>(null);
+  const [metricsData, setMetricsData] = useState<EventMetrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [scanResult, setScanResult] = useState<TicketValidationResult | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanLoading, setScanLoading] = useState(false);
   
   const [explorerView, setExplorerView] = useState<'events' | 'tickets'>('events');
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -252,6 +259,10 @@ const App: React.FC = () => {
     setAdminDashboard(null);
     setPendingOrganizers([]);
     setAllOrganizers([]);
+    setMetricsEvent(null);
+    setMetricsData(null);
+    setScanResult(null);
+    setScanError(null);
   };
 
   const scrollToSection = (id: string) => {
@@ -273,6 +284,43 @@ const App: React.FC = () => {
       setNotification('Ticket eliminado.');
     } catch (error: any) {
       setNotification(error?.message || 'No se pudo eliminar el ticket.');
+    }
+  };
+
+  const handleOpenMetrics = async (event: Event) => {
+    setMetricsEvent(event);
+    setMetricsLoading(true);
+    setScanResult(null);
+    setScanError(null);
+    try {
+      const metrics = await eventsService.getMetrics(event.id);
+      setMetricsData(metrics);
+    } catch (error: any) {
+      setMetricsData(null);
+      setScanError(error?.message || 'No se pudieron cargar las métricas.');
+    } finally {
+      setMetricsLoading(false);
+    }
+  };
+
+  const handleCloseMetrics = () => {
+    setMetricsEvent(null);
+    setMetricsData(null);
+    setScanResult(null);
+    setScanError(null);
+  };
+
+  const handleScanQr = async (qrPayload: string) => {
+    setScanLoading(true);
+    setScanError(null);
+    try {
+      const result = await ticketsService.validateTicket(qrPayload);
+      setScanResult(result);
+    } catch (error: any) {
+      setScanResult(null);
+      setScanError(error?.message || 'No se pudo validar el QR.');
+    } finally {
+      setScanLoading(false);
     }
   };
 
@@ -697,6 +745,7 @@ const App: React.FC = () => {
                   onEdit={handleStartEdit}
                   onDelete={handleDeleteEvent}
                   onTogglePublish={handleTogglePublish}
+                onViewMetrics={handleOpenMetrics}
                 />
               </section>
             </div>
@@ -765,6 +814,19 @@ const App: React.FC = () => {
           user={user}
           onClose={() => setShowProfile(false)}
           onUpdate={handleUpdateProfile}
+        />
+      )}
+
+      {metricsEvent && (
+        <OrganizerEventMetricsModal
+          event={metricsEvent}
+          metrics={metricsData}
+          isLoading={metricsLoading}
+          scanResult={scanResult}
+          scanError={scanError}
+          isScanning={scanLoading}
+          onScan={handleScanQr}
+          onClose={handleCloseMetrics}
         />
       )}
 

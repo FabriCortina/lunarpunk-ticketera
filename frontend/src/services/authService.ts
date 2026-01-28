@@ -21,8 +21,8 @@ const clearSession = () => {
 };
 
 export const authService = {
-  register: async (name: string, email: string, password: string, role: UserRole): Promise<User> => {
-    const response = await post<AuthResponse>('/api/auth/register', { name, email, password, role });
+  register: async (name: string, email: string, password: string, role: UserRole, cuitCuil?: string): Promise<User> => {
+    const response = await post<AuthResponse>('/api/auth/register', { name, email, password, role, cuitCuil });
     if (!response.token) {
       clearSession();
       throw new Error('Cuenta creada. Tu organización está pendiente de aprobación.');

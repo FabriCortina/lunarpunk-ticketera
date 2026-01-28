@@ -150,13 +150,20 @@ export class TicketService {
       throw new AppError('Forbidden: You are not the organizer of this event', 403);
     }
 
+    const buyer = {
+      name: ticket.explorer_name ?? null,
+      email: ticket.explorer_email ?? null,
+      cuitCuil: ticket.explorer_cuit_cuil ?? null
+    };
+
     // 4. Verificar Estado e Idempotencia
     if (ticket.status === 'VALIDATED') {
        return {
          valid: false,
          message: 'ALREADY USED',
          ticket,
-         validatedAt: ticket.validated_at
+         validatedAt: ticket.validated_at,
+         buyer
        };
     }
 
@@ -164,7 +171,8 @@ export class TicketService {
        return {
          valid: false,
          message: `INVALID STATUS: ${ticket.status}`,
-         ticket
+         ticket,
+         buyer
        };
     }
 
@@ -177,14 +185,16 @@ export class TicketService {
          valid: false,
          message: 'ALREADY USED (Race Condition)',
          ticket,
-         validatedAt: new Date()
+         validatedAt: new Date(),
+         buyer
       };
     }
 
     return {
       valid: true,
       message: 'ACCESS GRANTED',
-      ticket: updatedTicket
+      ticket: updatedTicket,
+      buyer
     };
   }
 }

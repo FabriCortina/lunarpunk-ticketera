@@ -112,6 +112,59 @@ export class EventService {
     await this.eventRepository.delete(eventId);
   }
 
+  async getOrganizerEventMetrics(eventId: string, userId: string) {
+    const event = await this.eventRepository.findById(eventId);
+
+    if (!event) {
+      throw new AppError('Event not found', 404);
+    }
+
+    if (event.organizer_id !== userId) {
+      throw new AppError('Forbidden: You do not own this event', 403);
+    }
+
+    const statusCounts = await this.ticketRepository.getEventStatusCounts(eventId);
+    const reserved = statusCounts.PENDING ?? 0;
+    const paid = statusCounts.PAID ?? 0;
+    const validated = statusCounts.VALIDATED ?? 0;
+    const canceled = statusCounts.CANCELED ?? 0;
+    const totalTickets = reserved + paid + validated + canceled;
+    const purchased = paid + validated;
+    const noShow = Math.max(purchased - validated, 0);
+    const capacity = Number(event.capacity || 0);
+    const occupancyRate = capacity > 0 ? Math.round((purchased / capacity) * 100) : 0;
+    const attendanceRate = purchased > 0 ? Math.round((validated / purchased) * 100) : 0;
+    const revenue = await this.ticketRepository.getEventRevenue(eventId);
+    const uniqueExplorers = await this.ticketRepository.getEventUniqueExplorers(eventId);
+    const byTicketType = await this.ticketRepository.getEventTicketTypesBreakdown(eventId);
+
+    return {
+      event: {
+        id: event.id,
+        title: event.title,
+        datetime: event.datetime,
+        location: event.location,
+        capacity: capacity
+      },
+      counts: {
+        reserved,
+        paid,
+        validated,
+        canceled,
+        purchased,
+        totalTickets,
+        uniqueExplorers
+      },
+      rates: {
+        occupancyRate,
+        attendanceRate
+      },
+      revenue,
+      noShow,
+      byTicketType
+    };
+  }
+
   private async buildEventResponse(event: any) {
     const types = await this.ticketTypeRepository.findByEventId(event.id);
     if (types.length === 0) {

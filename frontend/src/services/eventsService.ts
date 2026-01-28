@@ -1,5 +1,5 @@
 import { get, post } from '../lib/api';
-import { Event, TicketType } from '../types';
+import { Event, TicketType, EventMetrics } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -142,5 +142,8 @@ export const eventsService = {
       const message = (await response.text()) || 'No se pudo eliminar el evento.';
       throw new Error(message);
     }
-  }
+  },
+
+  getMetrics: async (eventId: string): Promise<EventMetrics> =>
+    get<EventMetrics>(`/api/events/${eventId}/metrics`)
 };
