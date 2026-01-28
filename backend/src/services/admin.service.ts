@@ -148,6 +148,21 @@ export class AdminService {
   }
 
   async getDashboard() {
+    const hasTicketTypes = await db.schema.hasTable('ticket_types');
+
+    const revenueQuery = db('tickets')
+      .leftJoin('events', 'tickets.event_id', 'events.id')
+      .where('tickets.status', 'PAID');
+
+    if (hasTicketTypes) {
+      revenueQuery.leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id');
+      revenueQuery.sum<{ revenue: string }>(
+        db.raw('COALESCE(ticket_types.price, events.price) as revenue')
+      );
+    } else {
+      revenueQuery.sum<{ revenue: string }>(db.raw('events.price as revenue'));
+    }
+
     const [
       totalOrganizersRow,
       pendingOrganizersRow,
@@ -169,14 +184,7 @@ export class AdminService {
       db('tickets')
         .count<{ totalTickets: string }>('id as totalTickets')
         .first(),
-      db('tickets')
-        .leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id')
-        .leftJoin('events', 'tickets.event_id', 'events.id')
-        .where('tickets.status', 'PAID')
-        .sum<{ revenue: string }>(
-          db.raw('COALESCE(ticket_types.price, events.price) as revenue')
-        )
-        .first()
+      revenueQuery.first()
     ]);
 
     const totalOrganizers = totalOrganizersRow?.totalOrganizers;
@@ -200,10 +208,15 @@ export class AdminService {
     const activeCount = Number(activeOrganizersCount?.count ?? 0);
     const anchoring = approvedCount > 0 ? Math.round((activeCount / approvedCount) * 100) : 0;
 
-    const recentTickets = await db('tickets')
+    const recentTicketsQuery = db('tickets')
       .leftJoin('events', 'tickets.event_id', 'events.id')
-      .leftJoin('users as explorers', 'tickets.explorer_id', 'explorers.id')
-      .leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id')
+      .leftJoin('users as explorers', 'tickets.explorer_id', 'explorers.id');
+
+    if (hasTicketTypes) {
+      recentTicketsQuery.leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id');
+    }
+
+    const recentTickets = await recentTicketsQuery
       .select(
         'tickets.id',
         'tickets.status',
@@ -211,23 +224,32 @@ export class AdminService {
         'tickets.mp_payment_id',
         'events.title as event_title',
         'explorers.email as explorer_email',
-        db.raw('COALESCE(ticket_types.price, events.price) as amount')
+        hasTicketTypes
+          ? db.raw('COALESCE(ticket_types.price, events.price) as amount')
+          : db.raw('events.price as amount')
       )
       .orderBy('tickets.created_at', 'desc')
       .limit(20);
 
-    const recentPayments = await db('tickets')
+    const recentPaymentsQuery = db('tickets')
       .leftJoin('events', 'tickets.event_id', 'events.id')
       .leftJoin('users as explorers', 'tickets.explorer_id', 'explorers.id')
-      .leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id')
-      .where('tickets.status', 'PAID')
+      .where('tickets.status', 'PAID');
+
+    if (hasTicketTypes) {
+      recentPaymentsQuery.leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id');
+    }
+
+    const recentPayments = await recentPaymentsQuery
       .select(
         'tickets.id',
         'tickets.created_at',
         'tickets.mp_payment_id',
         'events.title as event_title',
         'explorers.email as explorer_email',
-        db.raw('COALESCE(ticket_types.price, events.price) as amount')
+        hasTicketTypes
+          ? db.raw('COALESCE(ticket_types.price, events.price) as amount')
+          : db.raw('events.price as amount')
       )
       .orderBy('tickets.created_at', 'desc')
       .limit(20);
