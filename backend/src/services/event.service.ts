@@ -1,32 +1,60 @@
 import { EventRepository } from '../repositories/event.repository';
+import { TicketTypeRepository } from '../repositories/ticketType.repository';
+import { TicketRepository } from '../repositories/ticket.repository';
 import { CreateEventInput, UpdateEventInput } from '../schemas/event.schema';
 import { AppError } from '../utils/errors';
 
 export class EventService {
-  constructor(private eventRepository: EventRepository) {}
+  constructor(
+    private eventRepository: EventRepository,
+    private ticketTypeRepository: TicketTypeRepository,
+    private ticketRepository: TicketRepository
+  ) {}
 
   async createEvent(userId: string, data: CreateEventInput) {
+    const hasTicketTypes = !!data.ticketTypes?.length;
+    const normalizedTypes = data.ticketTypes?.map((type) => ({
+      name: type.name,
+      description: type.description,
+      price: Number(type.price),
+      capacity: Number(type.capacity)
+    }));
+    const minPrice = hasTicketTypes
+      ? Math.min(...(normalizedTypes || []).map((type) => type.price))
+      : Number(data.price ?? 0);
+    const totalCapacity = hasTicketTypes
+      ? (normalizedTypes || []).reduce((sum, type) => sum + type.capacity, 0)
+      : Number(data.capacity ?? 0);
+
     const eventData = {
       organizer_id: userId,
       title: data.title,
       description: data.description,
       datetime: new Date(data.datetime),
-      price: data.price,
-      capacity: data.capacity,
+      price: minPrice,
+      capacity: totalCapacity,
       location: data.location,
       image_url: data.imageUrl,
       is_published: false
     };
 
-    return this.eventRepository.create(eventData);
+    const event = await this.eventRepository.create(eventData);
+
+    if (hasTicketTypes && normalizedTypes) {
+      await this.ticketTypeRepository.createMany(event.id, normalizedTypes);
+    }
+
+    return this.buildEventResponse(event);
   }
 
   async getPublishedEvents() {
-    return this.eventRepository.findAllPublished();
+    const events = await this.eventRepository.findAllPublished();
+    return this.buildEventResponses(events);
   }
 
   async getOrganizerEvents(userId: string) {
-    return this.eventRepository.findAllByOrganizer(userId);
+    const events = await this.eventRepository.findAllByOrganizer(userId);
+    return this.buildEventResponses(events);
   }
 
   async updateEvent(eventId: string, userId: string, data: UpdateEventInput) {
@@ -45,8 +73,12 @@ export class EventService {
       updateData.image_url = data.imageUrl;
       delete updateData.imageUrl;
     }
+    if ('ticketTypes' in updateData) {
+      delete updateData.ticketTypes;
+    }
 
-    return this.eventRepository.update(eventId, updateData);
+    const updated = await this.eventRepository.update(eventId, updateData);
+    return this.buildEventResponse(updated);
   }
 
   async togglePublish(eventId: string, userId: string) {
@@ -60,9 +92,10 @@ export class EventService {
       throw new AppError('Forbidden: You do not own this event', 403);
     }
 
-    return this.eventRepository.update(eventId, {
+    const updated = await this.eventRepository.update(eventId, {
       is_published: !event.is_published
     });
+    return this.buildEventResponse(updated);
   }
 
   async deleteEvent(eventId: string, userId: string) {
@@ -77,5 +110,38 @@ export class EventService {
     }
 
     await this.eventRepository.delete(eventId);
+  }
+
+  private async buildEventResponse(event: any) {
+    const types = await this.ticketTypeRepository.findByEventId(event.id);
+    if (types.length === 0) {
+      const sold = await this.ticketRepository.countByEventId(event.id);
+      return {
+        ...event,
+        available_tickets: Math.max(Number(event.capacity) - sold, 0),
+        ticket_types: []
+      };
+    }
+
+    const ticketTypes = await Promise.all(
+      types.map(async (type) => {
+        const sold = await this.ticketRepository.countByTicketTypeId(type.id);
+        return {
+          ...type,
+          available: Math.max(Number(type.capacity) - sold, 0)
+        };
+      })
+    );
+    const availableTotal = ticketTypes.reduce((sum, type) => sum + Number(type.available), 0);
+
+    return {
+      ...event,
+      available_tickets: availableTotal,
+      ticket_types: ticketTypes
+    };
+  }
+
+  private async buildEventResponses(events: any[]) {
+    return Promise.all(events.map((event) => this.buildEventResponse(event)));
   }
 }

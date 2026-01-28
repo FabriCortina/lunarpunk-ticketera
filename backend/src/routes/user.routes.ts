@@ -12,7 +12,7 @@ export async function userRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const user = await db('users')
       .where({ id: req.user!.id })
-      .select('id', 'name', 'email', 'role', 'avatar', 'created_at')
+      .select('id', 'name', 'email', 'role', 'avatar', 'created_at', 'status', 'limits')
       .first();
 
     if (!user) {

@@ -6,7 +6,8 @@ const TOKEN_KEY = 'token';
 
 type AuthResponse = {
   user: User;
-  token: string;
+  token: string | null;
+  pendingApproval?: boolean;
 };
 
 const storeSession = (payload: AuthResponse) => {
@@ -22,12 +23,20 @@ const clearSession = () => {
 export const authService = {
   register: async (name: string, email: string, password: string, role: UserRole): Promise<User> => {
     const response = await post<AuthResponse>('/api/auth/register', { name, email, password, role });
+    if (!response.token) {
+      clearSession();
+      throw new Error('Cuenta creada. Tu organización está pendiente de aprobación.');
+    }
     storeSession(response);
     return response.user;
   },
 
   login: async (email: string, password: string): Promise<User> => {
     const response = await post<AuthResponse>('/api/auth/login', { email, password });
+    if (!response.token) {
+      clearSession();
+      throw new Error('No se pudo iniciar sesión.');
+    }
     storeSession(response);
     return response.user;
   },

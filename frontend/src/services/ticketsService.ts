@@ -1,9 +1,9 @@
-import { get, post } from '../lib/api';
+import { del, get, post } from '../lib/api';
 import { Ticket } from '../types';
 
 export const ticketsService = {
-  reserveTicket: async (eventId: string): Promise<Ticket> => {
-    const ticket = await post<any>('/api/tickets/reserve', { eventId });
+  reserveTicket: async (eventId: string, ticketTypeId?: string): Promise<Ticket> => {
+    const ticket = await post<any>('/api/tickets/reserve', { eventId, ticketTypeId });
     return mapTicket(ticket);
   },
 
@@ -20,6 +20,9 @@ export const ticketsService = {
   getTicketQr: async (ticketId: string): Promise<{ qrPayload: string | null }> =>
     get(`/api/tickets/${ticketId}/qr`),
 
+  deleteTicket: async (ticketId: string): Promise<void> =>
+    del(`/api/tickets/${ticketId}`),
+
   getEventTickets: async (eventId: string) =>
     get(`/api/tickets/event/${eventId}`),
 
@@ -34,5 +37,8 @@ const mapTicket = (ticket: any): Ticket => ({
   status: ticket.status,
   createdAt: ticket.created_at ?? ticket.createdAt,
   qrPayload: ticket.qrPayload ?? ticket.qr_payload ?? null,
-  ticketCode: ticket.ticketCode ?? ticket.id
+  ticketCode: ticket.ticketCode ?? ticket.id,
+  ticketTypeName: ticket.ticket_type_name ?? ticket.ticketTypeName ?? null,
+  ticketTypeDescription: ticket.ticket_type_description ?? ticket.ticketTypeDescription ?? null,
+  ticketTypePrice: ticket.ticket_type_price ?? ticket.ticketTypePrice ?? null
 });

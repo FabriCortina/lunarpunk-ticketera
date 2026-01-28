@@ -6,8 +6,8 @@ export class TicketController {
   constructor(private ticketService: TicketService) {}
 
   reserve = async (req: FastifyRequest, reply: FastifyReply) => {
-    const { eventId } = req.body as ReserveTicketInput;
-    const ticket = await this.ticketService.reserveTicket(req.user!.id, eventId);
+    const { eventId, ticketTypeId } = req.body as ReserveTicketInput;
+    const ticket = await this.ticketService.reserveTicket(req.user!.id, eventId, ticketTypeId);
     return reply.status(201).send(ticket);
   };
 
@@ -32,6 +32,12 @@ export class TicketController {
     const { id } = req.params as { id: string };
     const qrData = await this.ticketService.getTicketQr(req.user!.id, id);
     return reply.status(200).send(qrData);
+  };
+
+  delete = async (req: FastifyRequest, reply: FastifyReply) => {
+    const { id } = req.params as { id: string };
+    await this.ticketService.deleteExplorerTicket(req.user!.id, id);
+    return reply.status(204).send();
   };
 
   validate = async (req: FastifyRequest, reply: FastifyReply) => {

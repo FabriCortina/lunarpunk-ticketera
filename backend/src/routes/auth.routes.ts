@@ -23,6 +23,12 @@ export async function authRoutes(app: FastifyInstance) {
   const router = app.withTypeProvider<ZodTypeProvider>();
 
   router.post('/register', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute'
+      }
+    },
     schema: {
       body: registerSchema
     }
@@ -36,12 +42,23 @@ export async function authRoutes(app: FastifyInstance) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const [user] = await db('users').insert({
-      name,
-      email,
-      password: hashedPassword,
-      role
-    }).returning(['id', 'name', 'email', 'role']);
+    const [user] = await db('users')
+      .insert({
+        name,
+        email,
+        password: hashedPassword,
+        role,
+        status: role === 'ORGANIZER' ? 'PENDING_APPROVAL' : null
+      })
+      .returning(['id', 'name', 'email', 'role', 'status']);
+
+    if (user.role === 'ORGANIZER' && user.status !== 'APPROVED') {
+      return reply.status(201).send({
+        user,
+        token: null,
+        pendingApproval: true
+      });
+    }
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
@@ -53,6 +70,12 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   router.post('/login', {
+    config: {
+      rateLimit: {
+        max: 15,
+        timeWindow: '1 minute'
+      }
+    },
     schema: {
       body: loginSchema
     }
@@ -67,6 +90,10 @@ export async function authRoutes(app: FastifyInstance) {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
       throw new AppError('Invalid credentials', 401);
+    }
+
+    if (user.role === 'ORGANIZER' && user.status !== 'APPROVED') {
+      throw new AppError('Organizer not approved', 403);
     }
 
     const token = jwt.sign(

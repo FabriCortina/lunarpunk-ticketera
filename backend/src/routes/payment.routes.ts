@@ -19,6 +19,12 @@ export async function paymentRoutes(app: FastifyInstance) {
     '/create-preference',
     {
       preHandler: authorize(['EXPLORER']),
+      config: {
+        rateLimit: {
+          max: 30,
+          timeWindow: '1 minute'
+        }
+      },
       schema: {
         body: createPreferenceSchema
       }

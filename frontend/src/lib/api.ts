@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 type RequestOptions = {
-  method: 'GET' | 'POST';
+  method: 'GET' | 'POST' | 'DELETE';
   body?: unknown;
 };
 
@@ -54,3 +54,6 @@ export const get = async <T>(path: string): Promise<T> =>
 
 export const post = async <T>(path: string, body?: unknown): Promise<T> =>
   request<T>(path, { method: 'POST', body });
+
+export const del = async <T>(path: string): Promise<T> =>
+  request<T>(path, { method: 'DELETE' });

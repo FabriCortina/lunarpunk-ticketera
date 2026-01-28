@@ -17,15 +17,21 @@ const envSchema = z.object({
   // Security
   JWT_SECRET: z.string().min(10, "JWT Secret must be secure"),
   QR_SECRET: z.string().min(10, "QR Secret must be secure and long"),
+  QR_TTL_SECONDS: z.coerce.number().int().min(0).default(0),
   
   // Third Party
   MP_ACCESS_TOKEN: z.string().min(1, "MercadoPago Access Token required"),
+  MP_WEBHOOK_SECRET: z.string().optional(),
+  MP_WEBHOOK_TOLERANCE_SECONDS: z.coerce.number().int().min(30).default(300),
   API_KEY: z.string().optional(),
+  ADMIN_BOOTSTRAP_SECRET: z.string().optional(),
   
   // App Config
   BACKEND_PUBLIC_BASE_URL: z.string().url().default('http://localhost:3100'),
   FRONTEND_PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
   ALLOWED_ORIGINS: z.string().default('*'), // CORS
+  RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(100),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1000).default(60_000),
 });
 
 const _env = envSchema.safeParse(process.env);
@@ -50,6 +56,10 @@ if (data.NODE_ENV === 'production') {
   if (!data.FRONTEND_PUBLIC_BASE_URL.startsWith('https://')) {
     throw new Error('❌ FRONTEND_PUBLIC_BASE_URL must use https in production');
   }
+}
+
+if (data.NODE_ENV === 'production' && !data.MP_WEBHOOK_SECRET) {
+  console.warn('⚠️ MP_WEBHOOK_SECRET is not configured; webhook verification is disabled.');
 }
 
 if (!data.DATABASE_URL && (!data.DB_HOST || !data.DB_USER || !data.DB_NAME)) {

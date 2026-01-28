@@ -59,7 +59,9 @@ export const OrganizerEventList: React.FC<OrganizerEventListProps> = ({
                   {event.title}
                   {!event.isPublished && <span className="ml-3 text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full align-middle font-body">BORRADOR</span>}
                 </h3>
-                <span className="text-lp-accent font-body font-bold text-lg">${event.price}</span>
+                <span className="text-lp-accent font-body font-bold text-lg">
+                  {event.ticketTypes && event.ticketTypes.length > 0 ? `Desde $${event.price}` : `$${event.price}`}
+                </span>
              </div>
 
              <div className="space-y-1 text-sm text-slate-400 mb-4 font-body">

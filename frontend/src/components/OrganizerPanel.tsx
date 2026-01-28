@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './Button';
 import { Event } from '../types';
 import { generateEventDescription, suggestEventTitle } from '../services/geminiService';
-import { Sparkles, MapPin, Calendar, DollarSign, Ticket, Save, X, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, MapPin, Calendar, Save, X, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
 
 interface OrganizerPanelProps {
   onEventCreate: (event: Omit<Event, 'organizerId'>) => void;
@@ -24,22 +24,35 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
     title: '',
     description: '',
     dateTime: '',
-    price: '',
     location: '',
-    tickets: '',
-    imageUrl: ''
+    imageUrl: '',
+    ticketTypes: [
+      { name: 'General', description: 'Acceso general', price: '', capacity: '' }
+    ]
   });
 
   useEffect(() => {
     if (editingEvent) {
+      const fallbackType = {
+        name: 'General',
+        description: editingEvent.description || 'Acceso general',
+        price: editingEvent.price.toString(),
+        capacity: editingEvent.capacity.toString()
+      };
       setFormData({
         title: editingEvent.title,
         description: editingEvent.description,
         dateTime: editingEvent.dateTime,
-        price: editingEvent.price.toString(),
         location: editingEvent.location,
-        tickets: editingEvent.capacity.toString(),
-        imageUrl: editingEvent.imageUrl
+        imageUrl: editingEvent.imageUrl,
+        ticketTypes: editingEvent.ticketTypes?.length
+          ? editingEvent.ticketTypes.map((type) => ({
+              name: type.name,
+              description: type.description,
+              price: type.price.toString(),
+              capacity: type.capacity.toString()
+            }))
+          : [fallbackType]
       });
     } else {
       resetForm();
@@ -47,11 +60,45 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
   }, [editingEvent]);
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', dateTime: '', price: '', location: '', tickets: '', imageUrl: '' });
+    setFormData({
+      title: '',
+      description: '',
+      dateTime: '',
+      location: '',
+      imageUrl: '',
+      ticketTypes: [
+        { name: 'General', description: 'Acceso general', price: '', capacity: '' }
+      ]
+    });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const updateTicketType = (index: number, field: string, value: string) => {
+    setFormData((prev) => {
+      const next = [...prev.ticketTypes];
+      next[index] = { ...next[index], [field]: value };
+      return { ...prev, ticketTypes: next };
+    });
+  };
+
+  const addTicketType = () => {
+    setFormData((prev) => ({
+      ...prev,
+      ticketTypes: [
+        ...prev.ticketTypes,
+        { name: '', description: '', price: '', capacity: '' }
+      ]
+    }));
+  };
+
+  const removeTicketType = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      ticketTypes: prev.ticketTypes.filter((_, idx) => idx !== index)
+    }));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,7 +122,11 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
          finalTitle = await suggestEventTitle("Evento Futuro");
     }
 
-    const desc = await generateEventDescription(finalTitle, formData.location || 'Metaverso');
+    const desc = await generateEventDescription(
+      finalTitle,
+      formData.location || 'Metaverso',
+      formData.description || 'Sin descripción base.'
+    );
     
     setFormData(prev => ({
       ...prev,
@@ -87,7 +138,22 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.dateTime || !formData.price) return;
+    if (!formData.title || !formData.dateTime) return;
+    if (!formData.ticketTypes.length) return;
+
+    const validTypes = formData.ticketTypes.filter(
+      (type) => type.name && type.description && type.price && type.capacity
+    );
+    if (validTypes.length !== formData.ticketTypes.length) return;
+
+    const parsedTypes = validTypes.map((type) => ({
+      name: type.name,
+      description: type.description,
+      price: Number(type.price),
+      capacity: Number(type.capacity)
+    }));
+    const totalCapacity = parsedTypes.reduce((sum, type) => sum + type.capacity, 0);
+    const minPrice = Math.min(...parsedTypes.map((type) => type.price));
 
     const finalImageUrl = formData.imageUrl || `https://picsum.photos/seed/${Date.now()}/800/600`;
 
@@ -97,11 +163,19 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
         title: formData.title,
         description: formData.description,
         dateTime: formData.dateTime,
-        price: Number(formData.price),
         location: formData.location,
         imageUrl: finalImageUrl,
-        capacity: Number(formData.tickets),
-        availableTickets: Number(formData.tickets) - (editingEvent.capacity - editingEvent.availableTickets)
+        price: minPrice,
+        capacity: totalCapacity,
+        availableTickets: totalCapacity - (editingEvent.capacity - editingEvent.availableTickets),
+        ticketTypes: parsedTypes.map((type, index) => ({
+          id: editingEvent.ticketTypes?.[index]?.id || `${index}`,
+          name: type.name,
+          description: type.description,
+          price: type.price,
+          capacity: type.capacity,
+          available: type.capacity
+        }))
       };
       onEventUpdate(updatedEvent);
     } else {
@@ -110,12 +184,20 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
         title: formData.title,
         description: formData.description,
         dateTime: formData.dateTime,
-        price: Number(formData.price),
         location: formData.location,
-        availableTickets: Number(formData.tickets),
-        capacity: Number(formData.tickets),
+        price: minPrice,
+        availableTickets: totalCapacity,
+        capacity: totalCapacity,
         imageUrl: finalImageUrl,
-        isPublished: true 
+        isPublished: true,
+        ticketTypes: parsedTypes.map((type, index) => ({
+          id: `${index}`,
+          name: type.name,
+          description: type.description,
+          price: type.price,
+          capacity: type.capacity,
+          available: type.capacity
+        }))
       };
       onEventCreate(newEvent);
     }
@@ -129,14 +211,14 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
       
       <div className="flex items-center justify-between mb-8">
         {/* H2 Title (28-32px) -> text-3xl is 30px */}
-        <h2 className="text-3xl font-title font-bold text-white flex items-center gap-3">
+          <h2 className="text-3xl font-title font-bold text-white flex items-center gap-3">
           {editingEvent ? (
             <>
-              <RotateCcw className="text-lp-primary" /> Editar Evento
+              <RotateCcw className="text-lp-primary" /> Editar Experiencia
             </>
           ) : (
             <>
-              <Sparkles className="text-lp-accent" /> Nuevo Evento
+              <Sparkles className="text-lp-accent" /> Nueva Experiencia
             </>
           )}
         </h2>
@@ -150,7 +232,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
               isLoading={loading}
               className="text-xs font-body"
             >
-              <Sparkles size={16} /> LunarIA
+              <Sparkles size={16} /> Lunar IA
             </Button>
           )}
           {editingEvent && onCancelEdit && (
@@ -165,7 +247,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Nombre del Evento</label>
+            <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Experiencia</label>
             <div className="relative">
               <input
                 type="text"
@@ -240,18 +322,18 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
         </div>
 
         <div className="space-y-2">
-          <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Descripción {editingEvent ? '' : '(Puedes enriquecerla con LunarIA)'}</label>
+          <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Cuenta sobre la experiencia {editingEvent ? '' : '(Puedes enriquecerla con Lunar IA)'}</label>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleInputChange}
             rows={4}
             className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors font-body"
-            placeholder="Describe la experiencia..."
+            placeholder="Describe la experiencia"
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Fecha</label>
             <div className="relative">
@@ -266,40 +348,85 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
               <Calendar className="absolute left-3 top-3.5 text-slate-500" size={18} />
             </div>
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Precio ($)</label>
-            <div className="relative">
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleInputChange}
-                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors pl-10 font-body"
-                placeholder="0.00"
-                min="0"
-                required
-              />
-              <DollarSign className="absolute left-3 top-3.5 text-slate-500" size={18} />
-            </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Tipos de aventuras</label>
+            {!editingEvent && (
+              <Button type="button" variant="secondary" onClick={addTicketType} className="text-xs font-body">
+                + Agregar tipo
+              </Button>
+            )}
           </div>
 
-           <div className="space-y-2">
-            <label className="text-lp-muted text-sm font-body uppercase tracking-wider">Capacidad Total</label>
-            <div className="relative">
-              <input
-                type="number"
-                name="tickets"
-                value={formData.tickets}
-                onChange={handleInputChange}
-                className="w-full bg-lp-bg/50 border border-lp-border rounded p-3 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors pl-10 font-body"
-                placeholder="100"
-                min="1"
-                required
-              />
-              <Ticket className="absolute left-3 top-3.5 text-slate-500" size={18} />
+          {formData.ticketTypes.map((type, index) => (
+            <div key={`${type.name}-${index}`} className="grid grid-cols-1 md:grid-cols-4 gap-4 glass-panel p-4 rounded-xl">
+              <div className="space-y-2 md:col-span-1">
+                <label className="text-[10px] uppercase tracking-wider text-lp-muted font-body">Nombre</label>
+                <input
+                  type="text"
+                  value={type.name}
+                  onChange={(e) => updateTicketType(index, 'name', e.target.value)}
+                  className="w-full bg-lp-bg/50 border border-lp-border rounded p-2 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors font-body text-sm"
+                  placeholder="General"
+                  required
+                  disabled={!!editingEvent}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[10px] uppercase tracking-wider text-lp-muted font-body">Cuenta sobre la aventura</label>
+                <textarea
+                  value={type.description}
+                  onChange={(e) => updateTicketType(index, 'description', e.target.value)}
+                  rows={2}
+                  className="w-full bg-lp-bg/50 border border-lp-border rounded p-2 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors font-body text-sm resize-none"
+                  placeholder="Acceso general"
+                  required
+                  disabled={!!editingEvent}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3 md:col-span-1">
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider text-lp-muted font-body">Precio</label>
+                  <input
+                    type="number"
+                    value={type.price}
+                    onChange={(e) => updateTicketType(index, 'price', e.target.value)}
+                    className="w-full bg-lp-bg/50 border border-lp-border rounded p-2 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors font-body text-sm"
+                    placeholder="0.00"
+                    min="0"
+                    required
+                    disabled={!!editingEvent}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider text-lp-muted font-body">Cantidad</label>
+                  <input
+                    type="number"
+                    value={type.capacity}
+                    onChange={(e) => updateTicketType(index, 'capacity', e.target.value)}
+                    className="w-full bg-lp-bg/50 border border-lp-border rounded p-2 text-lp-navy placeholder:text-lp-navy/60 focus:border-lp-accent focus:outline-none transition-colors font-body text-sm"
+                    placeholder="100"
+                    min="1"
+                    required
+                    disabled={!!editingEvent}
+                  />
+                </div>
+              </div>
+              {!editingEvent && formData.ticketTypes.length > 1 && (
+                <div className="md:col-span-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => removeTicketType(index)}
+                    className="text-xs text-lp-error hover:text-lp-error/80 font-body"
+                  >
+                    Quitar tipo
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          ))}
         </div>
 
         <div className="pt-4">
@@ -310,7 +437,7 @@ export const OrganizerPanel: React.FC<OrganizerPanelProps> = ({
             {editingEvent ? (
               <><Save size={20} /> Actualizar Evento</>
             ) : (
-              'Publicar evento a la comunidad'
+              'Publicar experiencia a la comunidad'
             )}
           </Button>
         </div>

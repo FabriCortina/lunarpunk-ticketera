@@ -1,5 +1,5 @@
 import { get, post } from '../lib/api';
-import { Event } from '../types';
+import { Event, TicketType } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -18,19 +18,43 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-const mapEvent = (event: any): Event => ({
-  id: event.id,
-  title: event.title,
-  description: event.description,
-  dateTime: event.datetime,
-  price: event.price,
-  location: event.location,
-  imageUrl: event.image_url,
-  capacity: event.capacity,
-  availableTickets: event.capacity,
-  isPublished: event.is_published,
-  organizerId: event.organizer_id
+const mapTicketType = (type: any): TicketType => ({
+  id: type.id,
+  name: type.name,
+  description: type.description,
+  price: Number(type.price),
+  capacity: Number(type.capacity),
+  available: Number(type.available ?? type.capacity ?? 0)
 });
+
+const mapEvent = (event: any): Event => {
+  const ticketTypes = Array.isArray(event.ticket_types)
+    ? event.ticket_types.map(mapTicketType)
+    : [];
+  const minPrice = ticketTypes.length
+    ? Math.min(...ticketTypes.map((type) => type.price))
+    : Number(event.price);
+  const availableTickets = event.available_tickets !== undefined
+    ? Number(event.available_tickets)
+    : ticketTypes.length
+      ? ticketTypes.reduce((sum, type) => sum + type.available, 0)
+      : Number(event.capacity);
+
+  return {
+    id: event.id,
+    title: event.title,
+    description: event.description,
+    dateTime: event.datetime,
+    price: minPrice,
+    location: event.location,
+    imageUrl: event.image_url,
+    capacity: Number(event.capacity),
+    availableTickets,
+    isPublished: event.is_published,
+    organizerId: event.organizer_id,
+    ticketTypes
+  };
+};
 
 export const eventsService = {
   getPublished: async (): Promise<Event[]> => {
@@ -51,7 +75,13 @@ export const eventsService = {
       price: event.price,
       capacity: event.capacity,
       location: event.location,
-      imageUrl: event.imageUrl
+      imageUrl: event.imageUrl,
+      ticketTypes: event.ticketTypes?.map((type) => ({
+        name: type.name,
+        description: type.description,
+        price: type.price,
+        capacity: type.capacity
+      }))
     });
     return mapEvent(created);
   },

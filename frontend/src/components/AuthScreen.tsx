@@ -7,12 +7,14 @@ import { UserPlus, LogIn, AlertCircle, Map, Database, User as UserIcon } from 'l
 
 interface AuthScreenProps {
   onAuthSuccess: (user: User) => void;
+  onOpenTerms: () => void;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onOpenTerms }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -41,6 +43,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
         }
         user = await authService.login(formData.email, formData.password);
       } else {
+        if (!termsAccepted) {
+          throw new Error("Debes aceptar los Términos y Condiciones para crear una cuenta.");
+        }
         if (!formData.firstName || !formData.lastName) {
            throw new Error("Nombre y Apellido son requeridos.");
         }
@@ -178,6 +183,29 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             />
           </div>
 
+          {!isLogin && (
+            <div className="flex items-start gap-3 text-xs text-slate-400 font-body">
+              <input
+                type="checkbox"
+                id="terms"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-1 h-4 w-4 accent-lp-accent"
+              />
+              <label htmlFor="terms" className="leading-relaxed">
+                Acepto los{' '}
+                <button
+                  type="button"
+                  onClick={onOpenTerms}
+                  className="text-lp-accent hover:text-white underline underline-offset-2"
+                >
+                  Términos y Condiciones
+                </button>
+                .
+              </label>
+            </div>
+          )}
+
           <Button 
             type="submit" 
             className="w-full py-3 mt-4" 
@@ -200,6 +228,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
               setIsLogin(!isLogin);
               setError(null);
               setFormData({ firstName: '', lastName: '', email: '', password: '', role: UserRole.EXPLORER });
+              setTermsAccepted(false);
             }}
             className="text-lp-accent hover:text-white font-bold text-sm mt-1 uppercase tracking-wider transition-colors font-body"
           >

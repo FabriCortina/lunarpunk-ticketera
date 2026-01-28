@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import process from 'node:process';
 import path from 'node:path';
@@ -12,11 +14,13 @@ import { eventRoutes } from './routes/event.routes';
 import { ticketRoutes } from './routes/ticket.routes';
 import { paymentRoutes } from './routes/payment.routes';
 import { webhookRoutes } from './routes/webhook.routes';
+import { adminRoutes } from './routes/admin.routes';
 import { AppError } from './utils/errors';
 import { ZodError } from 'zod';
 import db from './database/connection';
 
 const app = Fastify({
+  bodyLimit: 5 * 1024 * 1024,
   logger: {
     level: env.LOG_LEVEL,
     transport: env.NODE_ENV === 'development'
@@ -30,9 +34,42 @@ app.register(cors, {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 });
 
+app.register(helmet, {
+  contentSecurityPolicy: env.NODE_ENV === 'production'
+    ? {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          fontSrc: ["'self'", "data:"],
+          connectSrc: ["'self'", "https:"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          frameAncestors: ["'none'"]
+        }
+      }
+    : false,
+  hsts: env.NODE_ENV === 'production'
+});
+
+app.register(rateLimit, {
+  global: true,
+  max: env.RATE_LIMIT_MAX,
+  timeWindow: env.RATE_LIMIT_WINDOW_MS,
+  addHeaders: {
+    'x-ratelimit-limit': true,
+    'x-ratelimit-remaining': true,
+    'x-ratelimit-reset': true
+  }
+});
+
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);
 
+if (env.NODE_ENV === 'production' && env.ALLOWED_ORIGINS === '*') {
+  app.log.warn('ALLOWED_ORIGINS is wildcard in production; restrict for safety.');
+}
 app.get('/health', async (req, reply) => {
   try {
     await db.raw('SELECT 1');
@@ -48,6 +85,7 @@ app.register(userRoutes, { prefix: '/api/users' });
 app.register(eventRoutes, { prefix: '/api/events' });
 app.register(ticketRoutes, { prefix: '/api/tickets' });
 app.register(paymentRoutes, { prefix: '/api/payments' });
+app.register(adminRoutes, { prefix: '/api/admin' });
 app.register(webhookRoutes, { prefix: '/webhooks' });
 
 const frontendDistClient = path.resolve(process.cwd(), 'frontend', 'dist', 'client');

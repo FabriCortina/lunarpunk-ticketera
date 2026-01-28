@@ -9,12 +9,13 @@ interface TicketWalletProps {
   events: Event[];
   onClose: () => void;
   userId: string;
+  onDeleteTicket?: (ticketId: string) => void;
 }
 
 const RESERVATION_TTL_MINUTES = 15;
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
-export const TicketWallet: React.FC<TicketWalletProps> = ({ tickets, events, onClose, userId }) => {
+export const TicketWallet: React.FC<TicketWalletProps> = ({ tickets, events, onClose, userId, onDeleteTicket }) => {
   const [now, setNow] = useState(Date.now());
   const [qrPayloads, setQrPayloads] = useState<Record<string, string | null>>({});
 
@@ -177,8 +178,20 @@ export const TicketWallet: React.FC<TicketWalletProps> = ({ tickets, events, onC
               const { isExpired, isWarning, progress } = getTicketStatusInfo(ticket);
               const isVisualExpired = ticket.status === TicketStatus.PENDING && isExpired;
 
+              const canDelete = ticket.status === TicketStatus.PENDING || ticket.status === TicketStatus.CANCELED;
+
               return (
                 <div key={ticket.id} className={`relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-lg p-4 border-l-4 border-l-lp-accent overflow-hidden group shadow-lg ${isVisualExpired ? 'grayscale opacity-70 border-slate-600' : ''} ${isWarning ? 'border-lp-error ring-1 ring-lp-error/20' : ''}`}>
+                  {onDeleteTicket && canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteTicket(ticket.id)}
+                      className="absolute top-2 right-2 z-20 text-slate-400 hover:text-lp-error transition-colors bg-black/40 rounded-full p-1.5"
+                      aria-label="Eliminar ticket"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                   
                    {/* Progress Bar for Wallet Items */}
                   {ticket.status === TicketStatus.PENDING && !isExpired && (
@@ -221,6 +234,14 @@ export const TicketWallet: React.FC<TicketWalletProps> = ({ tickets, events, onC
                          </div>
                     )}
                   </div>
+
+                  {ticket.ticketTypeName && (
+                    <div className="mt-1 mb-3 text-center relative z-10">
+                      <p className="text-lp-accent text-sm font-title uppercase tracking-wider">
+                        {ticket.ticketTypeName}
+                      </p>
+                    </div>
+                  )}
                   
                   <div className="border-t border-white/5 my-3 pt-3 flex justify-between items-center relative z-10 font-body">
                      {renderStatus(ticket)}

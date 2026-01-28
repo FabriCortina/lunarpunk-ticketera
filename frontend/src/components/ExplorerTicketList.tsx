@@ -4,23 +4,25 @@ import { Button } from './Button';
 import { BrandLogo } from './BrandLogo';
 import { ticketsService } from '../services/ticketsService';
 import { paymentsService } from '../services/paymentsService';
-import { QrCode, Calendar, MapPin, Clock, CheckCircle, Ban, CheckCheck, Ticket as TicketIcon, AlertCircle, RefreshCcw, CreditCard, AlertTriangle, Hourglass, Lock } from 'lucide-react';
+import { QrCode, Calendar, MapPin, Clock, CheckCircle, Ban, CheckCheck, Ticket as TicketIcon, AlertCircle, RefreshCcw, CreditCard, AlertTriangle, Hourglass, Lock, X } from 'lucide-react';
 
 interface ExplorerTicketListProps {
   tickets: Ticket[];
   events: Event[];
   userId: string;
   onGoToEvents?: () => void;
+  onDeleteTicket?: (ticketId: string) => void;
 }
 
 const RESERVATION_TTL_MINUTES = 15;
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
-export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets, events, userId, onGoToEvents }) => {
+export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets, events, userId, onGoToEvents, onDeleteTicket }) => {
   const [now, setNow] = useState(Date.now());
   const [qrPayloads, setQrPayloads] = useState<Record<string, string | null>>({});
   const [checkoutLoadingId, setCheckoutLoadingId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [retryEnabledIds, setRetryEnabledIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -283,20 +285,34 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
           if (!event) return null; 
 
           const { isExpired, isWarning, progress } = getTicketStatusInfo(ticket);
+          const canRetry = retryEnabledIds.has(ticket.id);
+          const isExpiredForUI = isExpired && !canRetry;
+
+          const canDelete = ticket.status === TicketStatus.PENDING || ticket.status === TicketStatus.CANCELED;
 
           return (
             <div 
               key={ticket.id} 
               className={`glass-panel p-0 rounded-xl flex flex-col md:flex-row overflow-hidden group transition-all duration-300 relative ${
-                isExpired && ticket.status === TicketStatus.PENDING 
+                isExpiredForUI && ticket.status === TicketStatus.PENDING 
                   ? 'opacity-60 border-slate-700' 
                   : isWarning 
                     ? 'border-lp-error/50 shadow-[0_0_15px_rgba(239,68,68,0.15)]' 
                     : 'hover:border-lp-accent/50'
               }`}
             >
+              {onDeleteTicket && canDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteTicket(ticket.id)}
+                  className="absolute top-3 right-3 z-20 text-slate-400 hover:text-lp-error transition-colors bg-black/40 rounded-full p-1.5"
+                  aria-label="Eliminar ticket"
+                >
+                  <X size={14} />
+                </button>
+              )}
               {/* Progress Bar for Pending Tickets */}
-              {ticket.status === TicketStatus.PENDING && !isExpired && (
+              {ticket.status === TicketStatus.PENDING && !isExpiredForUI && (
                 <div className="absolute top-0 left-0 w-full h-1 bg-slate-800 z-10">
                   <div 
                     className={`h-full transition-all duration-1000 ease-linear ${isWarning ? 'bg-lp-error shadow-[0_0_10px_red]' : 'bg-lp-warning'}`}
@@ -330,6 +346,14 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
                   {renderStatus(ticket)}
                 </div>
 
+                {ticket.ticketTypeName && (
+                  <div className="mb-4 text-center">
+                    <p className="text-lp-accent text-lg md:text-xl font-title uppercase tracking-wider">
+                      {ticket.ticketTypeName}
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-2 text-sm text-slate-400 font-body">
                   <div className="flex items-center gap-2">
                     <Calendar size={14} /> <span>{new Date(event.dateTime).toLocaleString()}</span>
@@ -340,16 +364,29 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
                 </div>
 
                 {/* Pending Actions */}
-                {ticket.status === TicketStatus.PENDING && (
+              {ticket.status === TicketStatus.PENDING && (
                   <div className="mt-4 pt-4 border-t border-white/5 flex gap-3 flex-col sm:flex-row items-start sm:items-center">
-                     {isExpired ? (
+                     {isExpiredForUI ? (
                         <>
                            <p className="text-xs text-lp-error flex-1 flex items-center font-body">
                               <AlertCircle size={12} className="mr-1" /> Reserva expirada. Si aún quieres asistir, intenta nuevamente.
                            </p>
                            <Button 
                               variant="ghost" 
-                              onClick={onGoToEvents} 
+                              isLoading={checkoutLoadingId === ticket.id}
+                              onClick={async () => {
+                                setRetryEnabledIds(prev => new Set(prev).add(ticket.id));
+                                setCheckoutError(null);
+                                setCheckoutLoadingId(ticket.id);
+                                try {
+                                  const response = await paymentsService.createPreference(ticket.id);
+                                  window.location.href = response.init_point;
+                                } catch (error: any) {
+                                  setCheckoutError(error?.message || 'No se pudo iniciar el pago.');
+                                } finally {
+                                  setCheckoutLoadingId(null);
+                                }
+                              }}
                               className="text-xs !py-1 font-body"
                            >
                               <RefreshCcw size={12} /> Reintentar Compra
@@ -393,8 +430,8 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
               </div>
 
               {/* Right: QR & Action */}
-              <div className={`p-6 md:w-48 bg-slate-900/50 flex flex-col items-center justify-center gap-3 border-l border-white/5 ${isExpired && ticket.status === TicketStatus.PENDING ? 'pointer-events-none' : ''}`}>
-                 {renderQrSection(ticket, isExpired)}
+              <div className={`p-6 md:w-48 bg-slate-900/50 flex flex-col items-center justify-center gap-3 border-l border-white/5 ${isExpiredForUI && ticket.status === TicketStatus.PENDING ? 'pointer-events-none' : ''}`}>
+                 {renderQrSection(ticket, isExpiredForUI)}
               </div>
             </div>
           );
