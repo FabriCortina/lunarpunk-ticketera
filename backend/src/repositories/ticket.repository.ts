@@ -151,11 +151,13 @@ export class TicketRepository {
 
     if (hasTicketTypes) {
       query.leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id');
-      query.sum(
-        this.db.raw('COALESCE(ticket_types.price, events.price) as revenue')
-      );
+      query.sum({
+        revenue: this.db.raw('COALESCE(ticket_types.price, events.price)')
+      });
     } else {
-      query.sum(this.db.raw('events.price as revenue'));
+      query.sum({
+        revenue: this.db.raw('events.price')
+      });
     }
 
     const result = await query.first();
