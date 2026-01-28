@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Event, EventMetrics, TicketValidationResult } from '../types';
 import { Button } from './Button';
-import { X, QrCode, CheckCircle, AlertTriangle } from 'lucide-react';
+import { X, QrCode, CheckCircle, AlertTriangle, Camera, CameraOff } from 'lucide-react';
+import jsQR from 'jsqr';
 
 interface OrganizerEventMetricsModalProps {
   event: Event;
@@ -28,10 +29,87 @@ export const OrganizerEventMetricsModal: React.FC<OrganizerEventMetricsModalProp
   onClose
 }) => {
   const [qrPayload, setQrPayload] = useState('');
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   const handleScan = () => {
     if (!qrPayload.trim()) return;
     onScan(qrPayload.trim());
+  };
+
+  const stopCamera = () => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  const scanFrame = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) {
+      rafRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      rafRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+    if (video.readyState >= 2) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const result = jsQR(imageData.data, imageData.width, imageData.height);
+      if (result?.data) {
+        setQrPayload(result.data);
+        stopCamera();
+        onScan(result.data);
+        return;
+      }
+    }
+    rafRef.current = requestAnimationFrame(scanFrame);
+  };
+
+  const startCamera = async () => {
+    if (cameraActive) return;
+    setCameraError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraActive(true);
+      rafRef.current = requestAnimationFrame(scanFrame);
+    } catch (error: any) {
+      setCameraError(error?.message || 'No se pudo acceder a la cámara.');
+      setCameraActive(false);
+    }
   };
 
   return (
@@ -124,6 +202,28 @@ export const OrganizerEventMetricsModal: React.FC<OrganizerEventMetricsModalProp
                 Validar QR
               </Button>
             </div>
+
+            <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+              <Button
+                type="button"
+                variant={cameraActive ? 'ghost' : 'secondary'}
+                onClick={cameraActive ? stopCamera : startCamera}
+                className="text-xs"
+              >
+                {cameraActive ? <CameraOff size={14} /> : <Camera size={14} />}
+                {cameraActive ? 'Detener cámara' : 'Escanear con cámara'}
+              </Button>
+              {cameraError && (
+                <span className="text-xs text-lp-error font-body">{cameraError}</span>
+              )}
+            </div>
+
+            {cameraActive && (
+              <div className="mt-2 w-full rounded-lg overflow-hidden border border-white/10">
+                <video ref={videoRef} className="w-full max-h-[320px] object-cover" playsInline muted />
+                <canvas ref={canvasRef} className="hidden" />
+              </div>
+            )}
 
             {scanError && (
               <p className="text-xs text-lp-error font-body">{scanError}</p>
