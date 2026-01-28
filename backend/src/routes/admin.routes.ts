@@ -40,16 +40,21 @@ export async function adminRoutes(app: FastifyInstance) {
         throw new AppError('Admin already exists', 409);
       }
 
-      const [user] = await db('users')
-        .where({ email })
-        .update({ role: 'ADMIN', status: null })
-        .returning(['id', 'name', 'email', 'role', 'status']);
-
+      const user = await db('users').where({ email }).first();
       if (!user) {
         throw new AppError('User not found', 404);
       }
 
-      return reply.send({ user });
+      await db('users')
+        .where({ id: user.id })
+        .update({ role: 'ADMIN', status: null });
+
+      const updated = await db('users')
+        .where({ id: user.id })
+        .select('id', 'name', 'email', 'role', 'status')
+        .first();
+
+      return reply.send({ user: updated });
     }
   );
 
