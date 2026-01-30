@@ -55,7 +55,8 @@ export const verifyMercadoPagoSignature = (
     requestId ? `id:${dataId};request-id:${requestId};ts:${ts}` : null
   ].filter(Boolean) as string[];
 
-  const signatureBuffer = Buffer.from(v1);
+  const signatureValue: string = v1;
+  const signatureBuffer = Buffer.from(signatureValue);
   const matches = manifests.some((manifest) => {
     const expected = crypto
       .createHmac('sha256', env.MP_WEBHOOK_SECRET)
