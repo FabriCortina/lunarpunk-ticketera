@@ -3,7 +3,6 @@ import { env } from './src/config/env';
 import path from 'path';
 
 const isProduction = env.NODE_ENV === 'production';
-const migrationExt = isProduction ? 'js' : 'ts';
 const migrationDir = isProduction
   ? path.join(__dirname, 'dist', 'src', 'database', 'migrations')
   : path.join(__dirname, 'src', 'database', 'migrations');
@@ -24,8 +23,7 @@ const config: Knex.Config = {
       },
   migrations: {
     directory: migrationDir,
-    extension: migrationExt,
-    loadExtensions: [`.${migrationExt}`]
+    loadExtensions: ['.ts', '.js']
   },
   pool: {
     min: 2,

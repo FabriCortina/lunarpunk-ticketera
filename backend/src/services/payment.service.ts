@@ -31,6 +31,7 @@ export class PaymentService {
     const preference = new Preference(this.mpClient);
     const backUrl = env.FRONTEND_PUBLIC_BASE_URL;
     const notificationUrl = `${env.BACKEND_PUBLIC_BASE_URL}/webhooks/mercadopago`;
+    const autoReturn = backUrl.startsWith('https://') ? 'approved' : undefined;
 
     try {
       const unitPrice = ticket.ticket_type_price ?? ticket.event_price;
@@ -60,7 +61,7 @@ export class PaymentService {
             failure: `${backUrl}?status=failure`,
             pending: `${backUrl}?status=pending`
           },
-          auto_return: 'approved',
+          ...(autoReturn ? { auto_return: autoReturn } : {}),
           notification_url: notificationUrl,
           metadata: {
             ticket_id: ticket.id,

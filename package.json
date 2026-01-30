@@ -5,7 +5,7 @@
   "main": "backend/dist/src/app.js",
   "scripts": {
     "dev": "npm --prefix frontend run dev",
-    "dev:backend": "ts-node backend/src/app.ts",
+    "dev:backend": "ts-node --files -P backend/tsconfig.json backend/src/app.ts",
     "dev:frontend": "npm --prefix frontend run dev",
     "build:backend": "tsc -p backend/tsconfig.build.json",
     "build:frontend": "npm --prefix frontend ci && npm --prefix frontend run build",

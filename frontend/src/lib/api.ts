@@ -28,7 +28,7 @@ const request = async <T>(path: string, options: RequestOptions): Promise<T> => 
   const response = await fetch(buildUrl(path), {
     method: options.method,
     headers: {
-      ...(options.method === 'POST' || options.method === 'PATCH'
+      ...(options.body !== undefined
         ? { 'Content-Type': 'application/json' }
         : {}),
       ...getAuthHeader()

@@ -7,7 +7,6 @@ import fs from 'fs';
 const distMigrations = path.join(__dirname, 'backend', 'dist', 'src', 'database', 'migrations');
 const srcMigrations = path.join(__dirname, 'backend', 'src', 'database', 'migrations');
 const useDist = env.NODE_ENV === 'production' && fs.existsSync(distMigrations);
-const migrationExt = useDist ? 'js' : 'ts';
 const migrationDir = useDist ? distMigrations : srcMigrations;
 
 const config: Knex.Config = {
@@ -26,8 +25,7 @@ const config: Knex.Config = {
       },
   migrations: {
     directory: migrationDir,
-    extension: migrationExt,
-    loadExtensions: [`.${migrationExt}`]
+    loadExtensions: ['.ts', '.js']
   },
   pool: {
     min: 2,

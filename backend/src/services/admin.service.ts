@@ -265,8 +265,7 @@ export class AdminService {
 
     const activeOrganizersCount = await db('events')
       .where({ is_published: true })
-      .distinct('organizer_id')
-      .count<{ count: string }>('organizer_id as count')
+      .countDistinct<{ count: string }>('organizer_id as count')
       .first();
 
     const approvedCount = Number(approvedOrganizersCount?.count ?? 0);

@@ -223,7 +223,7 @@ export const BlogReader: React.FC<Props> = ({ userRole, isAuthenticated }) => {
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="Escribe tu comentario..."
-                  className="w-full bg-lp-bg/40 border border-lp-border rounded-lg px-3 py-2 text-sm text-white font-body min-h-[120px]"
+                  className="w-full bg-white/90 border border-lp-border rounded-lg px-3 py-2 text-sm text-lp-navy placeholder:text-slate-500 placeholder:opacity-100 font-body min-h-[120px]"
                 />
                 {commentError && <p className="text-xs text-lp-error font-body">{commentError}</p>}
                 <Button variant="primary" onClick={handleAddComment} className="font-body">

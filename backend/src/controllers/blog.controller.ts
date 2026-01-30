@@ -53,6 +53,11 @@ export class BlogController {
     return reply.send(post);
   };
 
+  listPendingReview = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const posts = await this.blogService.listPendingReview();
+    return reply.send(posts);
+  };
+
   addComment = async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as { id: string };
     const body = req.body as BlogCommentInput;

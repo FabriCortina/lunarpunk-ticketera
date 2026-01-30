@@ -622,6 +622,20 @@ const App: React.FC = () => {
                   <Sparkles size={18} /> Blog
                 </Button>
 
+                {/* ADMIN MENU */}
+                {user.role === UserRole.ADMIN && (
+                    <Button
+                      variant={activeSection === 'primary' ? "primary" : "ghost"}
+                      onClick={() => {
+                        setActiveSection('primary');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="hidden md:flex font-body"
+                    >
+                      <ShieldCheck size={18} /> Panel
+                    </Button>
+                )}
+
                 {/* ORGANIZER MENU */}
                 {user.role === UserRole.ORGANIZER && (
                     <Button 

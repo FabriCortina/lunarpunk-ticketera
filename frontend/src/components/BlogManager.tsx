@@ -25,6 +25,7 @@ export const BlogManager: React.FC<Props> = ({ role, onNotify }) => {
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [formData, setFormData] = useState({ ...emptyForm });
   const [loading, setLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
 
   const isAdmin = role === UserRole.ADMIN;
   const canWrite = role === UserRole.ADMIN || role === UserRole.ORGANIZER;
@@ -74,14 +75,57 @@ export const BlogManager: React.FC<Props> = ({ role, onNotify }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleCoverImageChange = (file?: File) => {
+    if (!file) {
+      setFormData({ ...formData, coverImageUrl: '' });
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      onNotify('Selecciona un archivo de imagen válido.');
+      return;
+    }
+    const maxSizeMb = 2;
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      onNotify(`La imagen debe ser menor a ${maxSizeMb}MB.`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      setFormData({ ...formData, coverImageUrl: result });
+    };
+    reader.onerror = () => {
+      onNotify('No se pudo cargar la imagen.');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const resetForm = () => {
     setEditingPost(null);
     setFormData({ ...emptyForm });
+    setFormErrors([]);
   };
 
   const handleSubmit = async () => {
-    if (!formData.title.trim() || !formData.content.trim()) {
-      onNotify('Completa el título y el contenido antes de guardar.');
+    const errors: string[] = [];
+    if (formData.title.trim().length < 3) {
+      errors.push('El título debe tener al menos 3 caracteres.');
+    }
+    if (formData.excerpt.trim().length > 0 && formData.excerpt.trim().length < 10) {
+      errors.push('El extracto debe tener al menos 10 caracteres si se completa.');
+    }
+    if (formData.content.trim().length < 20) {
+      errors.push('El contenido debe tener al menos 20 caracteres.');
+    }
+    if (formData.coverImageUrl.trim().length > 0) {
+      const isDataUrl = formData.coverImageUrl.startsWith('data:image/');
+      const isHttpUrl = /^https?:\/\//i.test(formData.coverImageUrl);
+      if (!isDataUrl && !isHttpUrl) {
+        errors.push('La imagen de portada debe ser una URL válida o una imagen subida.');
+      }
+    }
+    setFormErrors(errors);
+    if (errors.length > 0) {
       return;
     }
     const payload = {
@@ -100,6 +144,7 @@ export const BlogManager: React.FC<Props> = ({ role, onNotify }) => {
         await blogService.create(payload);
         onNotify('Borrador creado.');
       }
+      setFormErrors([]);
       resetForm();
       await loadData();
     } catch (error: any) {
@@ -165,42 +210,71 @@ export const BlogManager: React.FC<Props> = ({ role, onNotify }) => {
           <PenSquare size={20} className="text-lp-accent" />
           {editingPost ? 'Editar artículo' : 'Nuevo artículo'}
         </h4>
+        {formErrors.length > 0 && (
+          <div className="bg-lp-error/10 border border-lp-error/40 rounded-lg px-4 py-3 text-sm text-lp-error font-body">
+            {formErrors.map((err) => (
+              <p key={err}>{err}</p>
+            ))}
+          </div>
+        )}
         <div className="grid gap-4 mt-4">
           <input
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             placeholder="Título"
-            className="bg-lp-bg/40 border border-lp-border rounded-lg px-3 py-2 text-sm text-white font-body"
+            className="bg-white/90 border border-lp-border rounded-lg px-3 py-2 text-sm text-lp-navy placeholder:text-slate-500 placeholder:opacity-100 font-body"
           />
+          <p className="text-[11px] text-lp-muted font-body">Mínimo 3 caracteres.</p>
           <textarea
             value={formData.excerpt}
             onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
             placeholder="Extracto breve"
-            className="bg-lp-bg/40 border border-lp-border rounded-lg px-3 py-2 text-sm text-white font-body min-h-[80px]"
+            className="bg-white/90 border border-lp-border rounded-lg px-3 py-2 text-sm text-lp-navy placeholder:text-slate-500 placeholder:opacity-100 font-body min-h-[80px]"
           />
+          <p className="text-[11px] text-lp-muted font-body">Opcional. Si completás: mínimo 10 caracteres.</p>
           <textarea
             value={formData.content}
             onChange={(e) => setFormData({ ...formData, content: e.target.value })}
             placeholder="Contenido del artículo"
-            className="bg-lp-bg/40 border border-lp-border rounded-lg px-3 py-2 text-sm text-white font-body min-h-[220px]"
+            className="bg-white/90 border border-lp-border rounded-lg px-3 py-2 text-sm text-lp-navy placeholder:text-slate-500 placeholder:opacity-100 font-body min-h-[220px]"
           />
-          <input
-            value={formData.coverImageUrl}
-            onChange={(e) => setFormData({ ...formData, coverImageUrl: e.target.value })}
-            placeholder="URL de imagen de portada"
-            className="bg-lp-bg/40 border border-lp-border rounded-lg px-3 py-2 text-sm text-white font-body"
-          />
+          <p className="text-[11px] text-lp-muted font-body">Mínimo 20 caracteres.</p>
+          <div className="grid gap-2">
+            <label className="text-xs text-lp-muted font-body">Imagen de portada</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleCoverImageChange(e.target.files?.[0])}
+              className="bg-white/90 border border-lp-border rounded-lg px-3 py-2 text-sm text-lp-navy placeholder:text-slate-500 placeholder:opacity-100 font-body"
+            />
+            <input
+              value={formData.coverImageUrl}
+              onChange={(e) => setFormData({ ...formData, coverImageUrl: e.target.value })}
+              placeholder="O pegá una URL de imagen"
+              className="bg-white/90 border border-lp-border rounded-lg px-3 py-2 text-sm text-lp-navy placeholder:text-slate-500 placeholder:opacity-100 font-body"
+            />
+            <p className="text-[11px] text-lp-muted font-body">Opcional. Si pegás URL, debe ser válida.</p>
+            {formData.coverImageUrl && (
+              <div className="rounded-xl border border-lp-border bg-lp-bg/40 p-2">
+                <img
+                  src={formData.coverImageUrl}
+                  alt="Vista previa portada"
+                  className="w-full max-h-56 object-cover rounded-lg"
+                />
+              </div>
+            )}
+          </div>
           <input
             value={formData.categories}
             onChange={(e) => setFormData({ ...formData, categories: e.target.value })}
             placeholder="Categorías (separadas por coma)"
-            className="bg-lp-bg/40 border border-lp-border rounded-lg px-3 py-2 text-sm text-white font-body"
+            className="bg-white/90 border border-lp-border rounded-lg px-3 py-2 text-sm text-lp-navy placeholder:text-slate-500 placeholder:opacity-100 font-body"
           />
           <input
             value={formData.tags}
             onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
             placeholder="Tags (separados por coma)"
-            className="bg-lp-bg/40 border border-lp-border rounded-lg px-3 py-2 text-sm text-white font-body"
+            className="bg-white/90 border border-lp-border rounded-lg px-3 py-2 text-sm text-lp-navy placeholder:text-slate-500 placeholder:opacity-100 font-body"
           />
         </div>
         <div className="flex flex-wrap gap-3 mt-4">
@@ -234,6 +308,11 @@ export const BlogManager: React.FC<Props> = ({ role, onNotify }) => {
               {post.status === 'DRAFT' && role === UserRole.ORGANIZER && (
                 <Button variant="primary" onClick={() => handleSubmitReview(post.id)} className="font-body">
                   Enviar a revisión
+                </Button>
+              )}
+              {post.status === 'DRAFT' && role === UserRole.ADMIN && (
+                <Button variant="primary" onClick={() => handlePublish(post.id)} className="font-body">
+                  Publicar
                 </Button>
               )}
             </div>

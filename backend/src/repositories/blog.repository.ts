@@ -231,7 +231,8 @@ export class BlogRepository {
         'users.name as author_name',
         'users.email as author_email'
       )
-      .where({ post_id: postId, status: 'APPROVED' })
+      .where({ post_id: postId })
+      .andWhere('blog_comments.status', 'APPROVED')
       .orderBy('blog_comments.created_at', 'asc');
   }
 

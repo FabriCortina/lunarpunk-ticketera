@@ -58,6 +58,7 @@
 - ✅ Manejo de errores centralizado
 - ✅ CORS configurable
 - ✅ Logging estructurado con Pino
+- ✅ Módulo de Blog con workflow de publicación
 
 ### Frontend
 - ✅ Interfaz React moderna con Vite
@@ -70,6 +71,7 @@
 - ✅ Dashboard ADMIN con KPIs y gestión de límites
 - ✅ Billetera de tickets con códigos QR
 - ✅ Modales y notificaciones
+- ✅ Blog con lectura pública y moderación
 
 ### Seguridad
 - ✅ Tokens JWT para autenticación
@@ -184,6 +186,15 @@ cp .env.example .env
 
 Edita `.env` con tus valores (ver sección [Configuración](#-configuración)).
 
+### 4.1 Configurar frontend (Vite)
+
+Crear `frontend/.env`:
+
+```env
+VITE_API_BASE_URL=http://localhost:3100
+VITE_GEMINI_API_KEY= # opcional para LunarIA
+```
+
 ### 5. Ejecutar migraciones
 
 ```bash
@@ -228,6 +239,13 @@ FRONTEND_PUBLIC_BASE_URL=http://localhost:3000
 ALLOWED_ORIGINS=*
 ```
 
+Variables de frontend (Vite):
+
+```env
+VITE_API_BASE_URL=http://localhost:3100
+VITE_GEMINI_API_KEY= # opcional
+```
+
 ### Obtener Credenciales
 
 #### MercadoPago
@@ -263,6 +281,8 @@ npm run dev:backend
 ```bash
 npm run dev:frontend
 ```
+
+> Nota: backend y frontend corren como procesos separados en local.
 
 ### Producción
 
@@ -342,6 +362,7 @@ lunarpunk-ticketera/
 - `GET /api/tickets/:id/qr` - Obtener QR de ticket (requiere auth, EXPLORER, owner, PAID)
 - `GET /api/tickets/event/:eventId` - Listar tickets de evento (requiere auth, ORGANIZER, owner del evento)
 - `POST /api/tickets/validate` - Validar ticket por QR (requiere auth, ORGANIZER)
+- `DELETE /api/tickets/:id` - Eliminar ticket (requiere auth, EXPLORER, status PENDING/CANCELED)
 
 #### Admin (Platform)
 - `GET /api/admin/organizers?status=` - Listar organizadores por estado
@@ -358,6 +379,25 @@ lunarpunk-ticketera/
 #### Pagos
 - `POST /api/payments/create-preference` - Crear preferencia de pago MercadoPago
 - `POST /webhooks/mercadopago` - Webhook de MercadoPago
+
+#### Blog
+- `GET /api/blog` - Listar posts publicados
+- `GET /api/blog/:slug` - Obtener post publicado
+- `GET /api/blog/categories` - Listar categorías
+- `GET /api/blog/tags` - Listar tags
+- `GET /api/blog/:id/comments` - Listar comentarios aprobados
+- `POST /api/blog/:id/comments` - Crear comentario (requiere auth)
+- `POST /api/blog/:id/view` - Registrar vista
+- `GET /api/blog/me` - Mis posts (requiere auth)
+- `POST /api/blog` - Crear post (ADMIN/ORGANIZER)
+- `PATCH /api/blog/:id` - Editar post (ADMIN/owner)
+- `POST /api/blog/:id/submit` - Enviar a revisión (ORGANIZER)
+- `GET /api/blog/pending` - Pendientes (ADMIN)
+- `POST /api/blog/:id/publish` - Publicar (ADMIN)
+- `POST /api/blog/:id/archive` - Archivar (ADMIN)
+- `GET /api/blog/comments/pending` - Comentarios pendientes (ADMIN)
+- `POST /api/blog/comments/:id/approve` - Aprobar comentario (ADMIN)
+- `POST /api/blog/comments/:id/reject` - Rechazar comentario (ADMIN)
 
 #### Usuarios
 - `GET /api/users/me` - Obtener perfil de usuario
@@ -427,6 +467,8 @@ Este proyecto está optimizado para desplegarse en [Railway](https://railway.app
    QR_SECRET=tu_secreto_qr_seguro
   MP_ACCESS_TOKEN=tu_token_mercadopago
   API_KEY= # opcional si no usas Gemini
+   VITE_API_BASE_URL=https://tu-backend.up.railway.app
+   VITE_GEMINI_API_KEY= # opcional
    BACKEND_PUBLIC_BASE_URL=https://tu-backend.up.railway.app
    FRONTEND_PUBLIC_BASE_URL=https://tu-frontend.up.railway.app
    ALLOWED_ORIGINS=https://tu-app.up.railway.app
@@ -457,9 +499,9 @@ El proyecto puede desplegarse en cualquier plataforma que soporte Node.js:
 
 ```bash
 # Desarrollo
-npm run dev              # Inicia backend y frontend
-npm run dev:frontend     # Solo frontend (Vite)
-npm run dev              # Solo backend (ts-node)
+npm run dev              # Solo frontend (Vite)
+npm run dev:backend       # Solo backend (ts-node)
+npm run dev:frontend     # Alias de frontend
 
 # Build
 npm run build            # Build completo (backend + frontend)

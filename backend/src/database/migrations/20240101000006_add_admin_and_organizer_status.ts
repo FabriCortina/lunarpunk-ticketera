@@ -20,27 +20,47 @@ export async function up(knex: Knex): Promise<void> {
     END$$;
   `);
 
-  await knex.schema.alterTable('users', (table) => {
-    table.specificType('status', 'organizer_status').nullable();
-    table.timestamp('approved_at');
-    table.uuid('approved_by_admin_id').references('id').inTable('users').onDelete('SET NULL');
-    table.text('rejection_reason');
-    table.jsonb('limits');
-  });
+  const hasStatus = await knex.schema.hasColumn('users', 'status');
+  const hasApprovedAt = await knex.schema.hasColumn('users', 'approved_at');
+  const hasApprovedBy = await knex.schema.hasColumn('users', 'approved_by_admin_id');
+  const hasRejection = await knex.schema.hasColumn('users', 'rejection_reason');
+  const hasLimits = await knex.schema.hasColumn('users', 'limits');
+  if (!hasStatus || !hasApprovedAt || !hasApprovedBy || !hasRejection || !hasLimits) {
+    await knex.schema.alterTable('users', (table) => {
+      if (!hasStatus) {
+        table.specificType('status', 'organizer_status').nullable();
+      }
+      if (!hasApprovedAt) {
+        table.timestamp('approved_at');
+      }
+      if (!hasApprovedBy) {
+        table.uuid('approved_by_admin_id').references('id').inTable('users').onDelete('SET NULL');
+      }
+      if (!hasRejection) {
+        table.text('rejection_reason');
+      }
+      if (!hasLimits) {
+        table.jsonb('limits');
+      }
+    });
+  }
 
   await knex('users')
     .where({ role: 'ORGANIZER' })
     .whereNull('status')
     .update({ status: 'APPROVED' });
 
-  await knex.schema.createTable('admin_actions', (table) => {
-    table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-    table.uuid('admin_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
-    table.uuid('target_user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
-    table.string('action').notNullable();
-    table.jsonb('metadata');
-    table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-  });
+  const hasAdminActions = await knex.schema.hasTable('admin_actions');
+  if (!hasAdminActions) {
+    await knex.schema.createTable('admin_actions', (table) => {
+      table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('admin_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+      table.uuid('target_user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+      table.string('action').notNullable();
+      table.jsonb('metadata');
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+    });
+  }
 }
 
 export async function down(knex: Knex): Promise<void> {
