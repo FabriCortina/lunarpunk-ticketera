@@ -13,6 +13,8 @@ import { BrandLogo } from './components/BrandLogo';
 import { Moon } from './components/Moon';
 import { MoonCursor } from './components/MoonCursor';
 import { AdminDashboard } from './components/AdminDashboard';
+import { BlogReader } from './components/BlogReader';
+import { BlogManager } from './components/BlogManager';
 import { OrganizerEventMetricsModal } from './components/OrganizerEventMetricsModal';
 import { authService } from './services/authService';
 import { eventsService } from './services/eventsService';
@@ -45,6 +47,7 @@ const App: React.FC = () => {
   const [scanLoading, setScanLoading] = useState(false);
   
   const [explorerView, setExplorerView] = useState<'events' | 'tickets'>('events');
+  const [activeSection, setActiveSection] = useState<'primary' | 'blog'>('primary');
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
   // --- SECURITY / AUTHORIZATION LAYER ---
@@ -237,6 +240,7 @@ const App: React.FC = () => {
     setUser(authUser);
     setNotification(`Bienvenido, ${authUser.name}. Modo: ${authUser.role}`);
     setExplorerView('events');
+    setActiveSection('primary');
   };
 
   const handleUpdateProfile = async (updatedUser: User, newPassword?: string) => {
@@ -254,6 +258,7 @@ const App: React.FC = () => {
     setUser(null);
     setEditingEvent(null);
     setExplorerView('events');
+    setActiveSection('primary');
     setShowWallet(false);
     setShowProfile(false);
     setAdminDashboard(null);
@@ -273,6 +278,7 @@ const App: React.FC = () => {
   };
 
   const handleGoToEvents = () => {
+    setActiveSection('primary');
     setExplorerView('events');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -605,6 +611,17 @@ const App: React.FC = () => {
 
             <nav className="flex items-center gap-3">
                 
+                <Button
+                  variant={activeSection === 'blog' ? "primary" : "ghost"}
+                  onClick={() => {
+                    setActiveSection('blog');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="hidden md:flex font-body"
+                >
+                  <Sparkles size={18} /> Blog
+                </Button>
+
                 {/* ORGANIZER MENU */}
                 {user.role === UserRole.ORGANIZER && (
                     <Button 
@@ -620,8 +637,9 @@ const App: React.FC = () => {
                 {user.role === UserRole.EXPLORER && (
                     <>
                         <Button 
-                            variant={explorerView === 'events' ? "primary" : "ghost"}
+                            variant={activeSection === 'primary' && explorerView === 'events' ? "primary" : "ghost"}
                             onClick={() => {
+                                setActiveSection('primary');
                                 setExplorerView('events');
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                             }}
@@ -631,8 +649,9 @@ const App: React.FC = () => {
                         </Button>
 
                         <Button 
-                            variant={explorerView === 'tickets' ? "primary" : "ghost"} 
+                            variant={activeSection === 'primary' && explorerView === 'tickets' ? "primary" : "ghost"} 
                             onClick={() => {
+                                setActiveSection('primary');
                                 setExplorerView('tickets');
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                             }}
@@ -721,8 +740,17 @@ const App: React.FC = () => {
             </div>
           )}
           
+          {activeSection === 'blog' && (
+            <div className="space-y-10">
+              <BlogReader userRole={user.role} isAuthenticated />
+              {(user.role === UserRole.ADMIN || user.role === UserRole.ORGANIZER) && (
+                <BlogManager role={user.role} onNotify={setNotification} />
+              )}
+            </div>
+          )}
+
           {/* RENDER FOR ORGANIZER */}
-          {user.role === UserRole.ORGANIZER && (
+          {activeSection === 'primary' && user.role === UserRole.ORGANIZER && (
             <div className="space-y-12">
               <section>
                  <OrganizerPanel 
@@ -752,7 +780,7 @@ const App: React.FC = () => {
           )}
 
           {/* RENDER FOR EXPLORER */}
-          {user.role === UserRole.EXPLORER && (
+          {activeSection === 'primary' && user.role === UserRole.EXPLORER && (
             <div>
                {explorerView === 'events' ? (
                  <BuyerPanel events={authorizedEvents} onBuyTicket={handleBuyTicket} />
@@ -768,7 +796,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {user.role === UserRole.ADMIN && (
+          {activeSection === 'primary' && user.role === UserRole.ADMIN && (
             <AdminDashboard
               data={adminDashboard}
               pendingOrganizers={pendingOrganizers}

@@ -159,3 +159,48 @@ export interface NavItem {
   label: string;
   role: UserRole;
 }
+
+export type BlogPostStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
+export type BlogCommentStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface BlogCategory {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface BlogTag {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface BlogPost {
+  id: string;
+  author_id: string;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  content: string;
+  cover_image_url?: string | null;
+  status: BlogPostStatus;
+  published_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  author_name?: string | null;
+  author_email?: string | null;
+  categories?: BlogCategory[];
+  tags?: BlogTag[];
+}
+
+export interface BlogComment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  status: BlogCommentStatus;
+  created_at: string;
+  author_name?: string | null;
+  author_email?: string | null;
+  post_title?: string | null;
+}

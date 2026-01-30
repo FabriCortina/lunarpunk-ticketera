@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 type RequestOptions = {
-  method: 'GET' | 'POST' | 'DELETE';
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
 };
 
@@ -28,7 +28,9 @@ const request = async <T>(path: string, options: RequestOptions): Promise<T> => 
   const response = await fetch(buildUrl(path), {
     method: options.method,
     headers: {
-      ...(options.method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.method === 'POST' || options.method === 'PATCH'
+        ? { 'Content-Type': 'application/json' }
+        : {}),
       ...getAuthHeader()
     },
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined
@@ -54,6 +56,9 @@ export const get = async <T>(path: string): Promise<T> =>
 
 export const post = async <T>(path: string, body?: unknown): Promise<T> =>
   request<T>(path, { method: 'POST', body });
+
+export const patch = async <T>(path: string, body?: unknown): Promise<T> =>
+  request<T>(path, { method: 'PATCH', body });
 
 export const del = async <T>(path: string): Promise<T> =>
   request<T>(path, { method: 'DELETE' });
