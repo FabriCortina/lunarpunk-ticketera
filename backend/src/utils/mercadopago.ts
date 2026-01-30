@@ -50,18 +50,25 @@ export const verifyMercadoPagoSignature = (
     return { ok: false, reason: 'signature_timestamp_out_of_range', requestId };
   }
 
-  const manifest = `${ts}.${dataId}`;
-  const expected = crypto
-    .createHmac('sha256', env.MP_WEBHOOK_SECRET)
-    .update(manifest)
-    .digest('hex');
+  const manifests = [
+    `${ts}.${dataId}`,
+    requestId ? `id:${dataId};request-id:${requestId};ts:${ts}` : null
+  ].filter(Boolean) as string[];
 
   const signatureBuffer = Buffer.from(v1);
-  const expectedBuffer = Buffer.from(expected);
-  if (
-    signatureBuffer.length !== expectedBuffer.length ||
-    !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
-  ) {
+  const matches = manifests.some((manifest) => {
+    const expected = crypto
+      .createHmac('sha256', env.MP_WEBHOOK_SECRET)
+      .update(manifest)
+      .digest('hex');
+    const expectedBuffer = Buffer.from(expected);
+    return (
+      signatureBuffer.length === expectedBuffer.length &&
+      crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
+    );
+  });
+
+  if (!matches) {
     return { ok: false, reason: 'signature_mismatch', requestId };
   }
 
