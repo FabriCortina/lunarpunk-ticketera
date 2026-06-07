@@ -192,7 +192,6 @@ Crear `frontend/.env`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3100
-VITE_GEMINI_API_KEY= # opcional para LunarIA
 ```
 
 ### 5. Ejecutar migraciones
@@ -243,7 +242,6 @@ Variables de frontend (Vite):
 
 ```env
 VITE_API_BASE_URL=http://localhost:3100
-VITE_GEMINI_API_KEY= # opcional
 ```
 
 ### Obtener Credenciales
@@ -468,7 +466,6 @@ Este proyecto está optimizado para desplegarse en [Railway](https://railway.app
   MP_ACCESS_TOKEN=tu_token_mercadopago
   API_KEY= # opcional si no usas Gemini
    VITE_API_BASE_URL=https://tu-backend.up.railway.app
-   VITE_GEMINI_API_KEY= # opcional
    BACKEND_PUBLIC_BASE_URL=https://tu-backend.up.railway.app
    FRONTEND_PUBLIC_BASE_URL=https://tu-frontend.up.railway.app
    ALLOWED_ORIGINS=https://tu-app.up.railway.app
