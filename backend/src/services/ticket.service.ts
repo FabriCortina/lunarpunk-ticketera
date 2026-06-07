@@ -1,3 +1,4 @@
+import db from '../database/connection';
 import { TicketRepository } from '../repositories/ticket.repository';
 import { EventRepository } from '../repositories/event.repository';
 import { TicketTypeRepository } from '../repositories/ticketType.repository';
@@ -12,50 +13,54 @@ export class TicketService {
   ) {}
 
   async reserveTicket(userId: string, eventId: string, ticketTypeId?: string) {
-    const event = await this.eventRepository.findById(eventId);
+    return db.transaction(async (trx) => {
+      // Lock de la fila del evento: serializa reservas concurrentes y evita
+      // que dos requests lean el mismo conteo antes de insertar (TOCTOU).
+      const event = await this.eventRepository.lockById(trx, eventId);
 
-    if (!event) {
-      throw new AppError('Event not found', 404);
-    }
-
-    if (!event.is_published) {
-      throw new AppError('Cannot reserve tickets for unpublished events', 400);
-    }
-
-    const ticketTypes = await this.ticketTypeRepository.findByEventId(eventId);
-    if (ticketTypes.length > 0) {
-      if (!ticketTypeId) {
-        throw new AppError('Ticket type is required for this event', 400);
+      if (!event) {
+        throw new AppError('Event not found', 404);
       }
 
-      const ticketType = ticketTypes.find((type) => type.id === ticketTypeId);
-      if (!ticketType) {
-        throw new AppError('Invalid ticket type for this event', 400);
+      if (!event.is_published) {
+        throw new AppError('Cannot reserve tickets for unpublished events', 400);
       }
 
-      const soldCount = await this.ticketRepository.countByTicketTypeId(ticketTypeId);
-      if (soldCount >= Number(ticketType.capacity)) {
-        throw new AppError('Ticket type is sold out', 409);
+      const ticketTypes = await this.ticketTypeRepository.findByEventId(eventId);
+      if (ticketTypes.length > 0) {
+        if (!ticketTypeId) {
+          throw new AppError('Ticket type is required for this event', 400);
+        }
+
+        const ticketType = await this.ticketTypeRepository.lockById(trx, ticketTypeId);
+        if (!ticketType || ticketType.event_id !== eventId) {
+          throw new AppError('Invalid ticket type for this event', 400);
+        }
+
+        const soldCount = await this.ticketRepository.countByTicketTypeId(ticketTypeId, trx);
+        if (soldCount >= Number(ticketType.capacity)) {
+          throw new AppError('Ticket type is sold out', 409);
+        }
+
+        return this.ticketRepository.create({
+          event_id: eventId,
+          explorer_id: userId,
+          ticket_type_id: ticketTypeId,
+          status: 'PENDING',
+        }, trx);
       }
 
+      const soldCount = await this.ticketRepository.countByEventId(eventId, trx);
+      if (soldCount >= Number(event.capacity)) {
+        throw new AppError('Event is sold out', 409);
+      }
+
+      // El QR Payload inicial es null hasta que se pague
       return this.ticketRepository.create({
         event_id: eventId,
         explorer_id: userId,
-        ticket_type_id: ticketTypeId,
         status: 'PENDING',
-      });
-    }
-
-    const soldCount = await this.ticketRepository.countByEventId(eventId);
-    if (soldCount >= Number(event.capacity)) {
-      throw new AppError('Event is sold out', 409);
-    }
-
-    // El QR Payload inicial es null hasta que se pague
-    return this.ticketRepository.create({
-      event_id: eventId,
-      explorer_id: userId,
-      status: 'PENDING',
+      }, trx);
     });
   }
 

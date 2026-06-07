@@ -29,6 +29,10 @@ export class EventRepository {
     return this.db('events').where({ id }).first();
   }
 
+  async lockById(trx: Knex, id: string): Promise<EventEntity | undefined> {
+    return trx('events').where({ id }).forUpdate().first();
+  }
+
   async findAllPublished(): Promise<EventEntity[]> {
     return this.db('events')
       .where({ is_published: true })

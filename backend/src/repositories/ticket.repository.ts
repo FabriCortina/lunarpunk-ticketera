@@ -30,8 +30,8 @@ export interface TicketWithEvent extends TicketEntity {
 export class TicketRepository {
   private db: Knex = db;
 
-  async create(data: Partial<TicketEntity>): Promise<TicketEntity> {
-    const [ticket] = await this.db('tickets')
+  async create(data: Partial<TicketEntity>, trx?: Knex): Promise<TicketEntity> {
+    const [ticket] = await (trx ?? this.db)('tickets')
       .insert(data)
       .returning('*');
     return ticket;
@@ -58,8 +58,8 @@ export class TicketRepository {
       .orderBy('created_at', 'desc');
   }
 
-  async countByEventId(eventId: string): Promise<number> {
-    const result = await this.db('tickets')
+  async countByEventId(eventId: string, trx?: Knex): Promise<number> {
+    const result = await (trx ?? this.db)('tickets')
       .where({ event_id: eventId })
       .andWhereNot({ status: 'CANCELED' })
       .count('id as count')
@@ -68,8 +68,8 @@ export class TicketRepository {
     return Number(result?.count || 0);
   }
 
-  async countByTicketTypeId(ticketTypeId: string): Promise<number> {
-    const result = await this.db('tickets')
+  async countByTicketTypeId(ticketTypeId: string, trx?: Knex): Promise<number> {
+    const result = await (trx ?? this.db)('tickets')
       .where({ ticket_type_id: ticketTypeId })
       .andWhereNot({ status: 'CANCELED' })
       .count('id as count')

@@ -36,4 +36,8 @@ export class TicketTypeRepository {
   async findById(id: string): Promise<TicketTypeEntity | undefined> {
     return this.db('ticket_types').where({ id }).first();
   }
+
+  async lockById(trx: Knex, id: string): Promise<TicketTypeEntity | undefined> {
+    return trx('ticket_types').where({ id }).forUpdate().first();
+  }
 }
