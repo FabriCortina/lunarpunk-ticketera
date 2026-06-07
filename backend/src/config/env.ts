@@ -56,6 +56,12 @@ if (data.NODE_ENV === 'production') {
   if (!data.FRONTEND_PUBLIC_BASE_URL.startsWith('https://')) {
     throw new Error('❌ FRONTEND_PUBLIC_BASE_URL must use https in production');
   }
+  // El wildcard combinado con CORS credentials:true refleja cualquier Origin
+  // y permite el envío de la cookie de sesión, lo que en producción equivale
+  // a deshabilitar CORS para requests autenticados. Debe configurarse explícitamente.
+  if (data.ALLOWED_ORIGINS === '*') {
+    throw new Error('❌ ALLOWED_ORIGINS must be explicitly set to a comma-separated allowlist in production (wildcard + credentialed CORS is unsafe)');
+  }
 }
 
 if (data.NODE_ENV === 'production' && !data.MP_WEBHOOK_SECRET) {

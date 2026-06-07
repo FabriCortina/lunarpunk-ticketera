@@ -235,6 +235,9 @@ API_KEY= # opcional si no usas Gemini
 # Configuración de la App
 BACKEND_PUBLIC_BASE_URL=http://localhost:3100
 FRONTEND_PUBLIC_BASE_URL=http://localhost:3000
+# '*' refleja cualquier Origin (válido solo en desarrollo). En producción
+# (NODE_ENV=production) el servidor rechaza arrancar con '*' y exige una
+# lista explícita separada por comas: ver sección de despliegue en Railway.
 ALLOWED_ORIGINS=*
 ```
 

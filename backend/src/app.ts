@@ -78,9 +78,6 @@ app.register(rateLimit, {
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);
 
-if (env.NODE_ENV === 'production' && env.ALLOWED_ORIGINS === '*') {
-  app.log.warn('ALLOWED_ORIGINS is wildcard in production; restrict for safety.');
-}
 app.get('/health', async (req, reply) => {
   try {
     await db.raw('SELECT 1');
