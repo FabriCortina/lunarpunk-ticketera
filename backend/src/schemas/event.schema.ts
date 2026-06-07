@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { httpUrlSchema } from './common';
 
 const ticketTypeSchema = z.object({
   name: z.string().min(1),
@@ -14,7 +15,7 @@ export const createEventSchema = z.object({
   price: z.coerce.number().min(0).optional(),
   capacity: z.coerce.number().int().positive().optional(),
   location: z.string().min(2),
-  imageUrl: z.string().url(),
+  imageUrl: httpUrlSchema,
   ticketTypes: z.array(ticketTypeSchema).min(1).optional()
 }).superRefine((data, ctx) => {
   const hasTicketTypes = !!data.ticketTypes?.length;
@@ -36,7 +37,7 @@ export const updateEventSchema = z.object({
   price: z.coerce.number().min(0).optional(),
   capacity: z.coerce.number().int().positive().optional(),
   location: z.string().min(2).optional(),
-  imageUrl: z.string().url().optional()
+  imageUrl: httpUrlSchema.optional()
 });
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;

@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { httpUrlSchema } from './common';
 
 export const createBlogPostSchema = z.object({
   title: z.string().min(3),
   slug: z.string().min(3).optional(),
   excerpt: z.string().min(10).optional(),
   content: z.string().min(20),
-  coverImageUrl: z.string().url().optional(),
+  coverImageUrl: httpUrlSchema.optional(),
   categories: z.array(z.string().min(2)).optional(),
   tags: z.array(z.string().min(2)).optional()
 });
@@ -15,7 +16,7 @@ export const updateBlogPostSchema = z.object({
   slug: z.string().min(3).optional(),
   excerpt: z.string().min(10).optional(),
   content: z.string().min(20).optional(),
-  coverImageUrl: z.string().url().optional(),
+  coverImageUrl: httpUrlSchema.optional(),
   categories: z.array(z.string().min(2)).optional(),
   tags: z.array(z.string().min(2)).optional()
 });
