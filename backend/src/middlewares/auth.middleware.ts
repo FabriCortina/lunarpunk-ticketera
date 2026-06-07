@@ -10,13 +10,26 @@ type JwtPayload = {
   role: 'ORGANIZER' | 'EXPLORER' | 'ADMIN';
 };
 
-export const authenticate = async (req: FastifyRequest, _reply: FastifyReply) => {
+const extractToken = (req: FastifyRequest): string | null => {
+  const cookieToken = req.cookies?.token;
+  if (cookieToken) {
+    return cookieToken;
+  }
+
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
+  }
+
+  return null;
+};
+
+export const authenticate = async (req: FastifyRequest, _reply: FastifyReply) => {
+  const token = extractToken(req);
+  if (!token) {
     throw new AppError('Unauthorized', 401);
   }
 
-  const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
     req.user = decoded;

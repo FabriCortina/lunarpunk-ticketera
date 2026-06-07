@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -32,9 +33,17 @@ const app = Fastify({
 });
 
 app.register(cors, {
-  origin: env.ALLOWED_ORIGINS === '*' ? '*' : env.ALLOWED_ORIGINS.split(','),
+  // Con cookies httpOnly necesitamos credentials: true, y los navegadores
+  // rechazan 'Access-Control-Allow-Origin: *' combinado con credenciales.
+  // 'origin: true' refleja el Origin del request (equivalente práctico al
+  // wildcard pero válido para requests con cookies); con ALLOWED_ORIGINS
+  // configurado se restringe a la lista explícita.
+  origin: env.ALLOWED_ORIGINS === '*' ? true : env.ALLOWED_ORIGINS.split(','),
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 });
+
+app.register(cookie);
 
 app.register(helmet, {
   contentSecurityPolicy: env.NODE_ENV === 'production'

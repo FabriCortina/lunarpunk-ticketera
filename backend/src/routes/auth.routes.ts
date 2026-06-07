@@ -28,6 +28,21 @@ const loginSchema = z.object({
   password: z.string()
 });
 
+const AUTH_COOKIE_NAME = 'token';
+const AUTH_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7d, igual que expiresIn del JWT
+
+const authCookieOptions = {
+  httpOnly: true,
+  // 'none' + secure es necesario porque en desarrollo el frontend (puerto 3000)
+  // y el backend (puerto 3100) son orígenes distintos; los navegadores modernos
+  // tratan a localhost como contexto seguro, y en producción Railway sirve
+  // todo por HTTPS, así que esta combinación funciona en ambos casos.
+  secure: true,
+  sameSite: 'none' as const,
+  path: '/',
+  maxAge: AUTH_COOKIE_MAX_AGE_SECONDS
+};
+
 export async function authRoutes(app: FastifyInstance) {
   const router = app.withTypeProvider<ZodTypeProvider>();
 
@@ -65,7 +80,6 @@ export async function authRoutes(app: FastifyInstance) {
     if (user.role === 'ORGANIZER' && user.status !== 'APPROVED') {
       return reply.status(201).send({
         user,
-        token: null,
         pendingApproval: true
       });
     }
@@ -76,7 +90,8 @@ export async function authRoutes(app: FastifyInstance) {
       { expiresIn: '7d' }
     );
 
-    return reply.status(201).send({ user, token });
+    reply.setCookie(AUTH_COOKIE_NAME, token, authCookieOptions);
+    return reply.status(201).send({ user });
   });
 
   router.post('/login', {
@@ -114,6 +129,12 @@ export async function authRoutes(app: FastifyInstance) {
 
     const { password: _, ...safeUser } = user;
 
-    return reply.send({ user: safeUser, token });
+    reply.setCookie(AUTH_COOKIE_NAME, token, authCookieOptions);
+    return reply.send({ user: safeUser });
+  });
+
+  router.post('/logout', async (_req, reply) => {
+    reply.clearCookie(AUTH_COOKIE_NAME, { path: '/' });
+    return reply.send({ ok: true });
   });
 }

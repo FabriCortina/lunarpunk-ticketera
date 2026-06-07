@@ -19,19 +19,16 @@ const buildUrl = (path: string) => {
   return `${normalizedBase}${normalizedPath}`;
 };
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
 const request = async <T>(path: string, options: RequestOptions): Promise<T> => {
   const response = await fetch(buildUrl(path), {
     method: options.method,
+    // El JWT viaja en una cookie httpOnly que el navegador adjunta solo;
+    // 'include' asegura que se envíe también en requests cross-origin (dev).
+    credentials: 'include',
     headers: {
       ...(options.body !== undefined
         ? { 'Content-Type': 'application/json' }
-        : {}),
-      ...getAuthHeader()
+        : {})
     },
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined
   });
