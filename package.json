@@ -13,8 +13,7 @@
     "start": "node backend/dist/src/app.js",
     "preview:frontend": "npm --prefix frontend run preview",
     "migrate": "knex migrate:latest --cwd backend",
-    "migrate:prod": "knex migrate:latest --knexfile dist/knexfile.js --cwd backend",
-    "deploy": "node scripts/check-db.js && npm run migrate:prod && npm start",
+    "deploy": "node scripts/check-db.js && npm run migrate && npm start",
     "preview": "npm --prefix frontend run preview"
   },
   "keywords": [],

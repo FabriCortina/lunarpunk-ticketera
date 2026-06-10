@@ -1,20 +1,12 @@
 import type { Knex } from 'knex';
 import { env } from './src/config/env';
 import path from 'path';
-import fs from 'fs';
 
-// When running compiled knexfile from backend/dist/, __dirname is backend/dist.
-const backendRoot = path.basename(__dirname) === 'dist'
-  ? path.join(__dirname, '..')
-  : __dirname;
-
-const distMigrations = path.join(backendRoot, 'dist', 'src', 'database', 'migrations');
-const srcMigrations = path.join(backendRoot, 'src', 'database', 'migrations');
-const compiledMarker = path.join(distMigrations, '20240101000001_create_core_tables.js');
-const migrationDir =
-  env.NODE_ENV === 'production' && fs.existsSync(compiledMarker)
-    ? distMigrations
-    : srcMigrations;
+// El pre-deploy de Railway corre 'knex migrate:latest --cwd backend' contra
+// este knexfile.ts vía ts-node, y los registros existentes en la tabla
+// knex_migrations usan los nombres .ts de src/database/migrations. Por eso
+// el directorio de migraciones es siempre 'src', tanto en dev como en prod.
+const migrationDir = path.join(__dirname, 'src', 'database', 'migrations');
 
 const config: Knex.Config = {
   client: 'pg',
