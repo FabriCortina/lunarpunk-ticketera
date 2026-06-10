@@ -2,9 +2,9 @@ import { del, get, post } from '../lib/api';
 import { Ticket, TicketValidationResult } from '../types';
 
 export const ticketsService = {
-  reserveTicket: async (eventId: string, ticketTypeId?: string): Promise<Ticket> => {
-    const ticket = await post<any>('/api/tickets/reserve', { eventId, ticketTypeId });
-    return mapTicket(ticket);
+  reserveTicket: async (eventId: string, ticketTypeId?: string, quantity: number = 1): Promise<Ticket[]> => {
+    const tickets = await post<any[]>('/api/tickets/reserve', { eventId, ticketTypeId, quantity });
+    return tickets.map(mapTicket);
   },
 
   getMyTickets: async (): Promise<Ticket[]> => {
@@ -32,6 +32,7 @@ export const ticketsService = {
 
 const mapTicket = (ticket: any): Ticket => ({
   id: ticket.id,
+  orderId: ticket.order_id ?? ticket.orderId,
   eventId: ticket.event_id ?? ticket.eventId,
   explorerId: ticket.explorer_id ?? ticket.explorerId,
   status: ticket.status,

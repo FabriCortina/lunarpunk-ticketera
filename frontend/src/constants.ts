@@ -67,6 +67,7 @@ export const INITIAL_EVENTS: Event[] = [
 export const INITIAL_TICKETS: Ticket[] = [
   {
     id: 't1',
+    orderId: 't1',
     eventId: '1', // Event from Org 1
     explorerId: MOCK_IDS.EXP_1, // Belongs to Explorer 1
     status: TicketStatus.PENDING,
@@ -76,6 +77,7 @@ export const INITIAL_TICKETS: Ticket[] = [
   },
   {
     id: 't2',
+    orderId: 't2',
     eventId: '3', // Event from Org 2
     explorerId: MOCK_IDS.EXP_2, // Belongs to Explorer 2
     status: TicketStatus.PENDING,

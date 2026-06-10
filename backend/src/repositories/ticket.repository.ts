@@ -6,6 +6,7 @@ export interface TicketEntity {
   event_id: string;
   explorer_id: string;
   ticket_type_id?: string | null;
+  order_id: string;
   status: 'PENDING' | 'PAID' | 'VALIDATED' | 'CANCELED';
   created_at: Date;
   mp_preference_id?: string;
@@ -35,6 +36,69 @@ export class TicketRepository {
       .insert(data)
       .returning('*');
     return ticket;
+  }
+
+  async createMany(rows: Partial<TicketEntity>[], trx?: Knex): Promise<TicketEntity[]> {
+    return (trx ?? this.db)('tickets').insert(rows).returning('*');
+  }
+
+  async findByOrderId(orderId: string, trx?: Knex): Promise<TicketWithEvent[]> {
+    return (trx ?? this.db)('tickets')
+      .join('events', 'tickets.event_id', 'events.id')
+      .leftJoin('users as explorers', 'tickets.explorer_id', 'explorers.id')
+      .leftJoin('ticket_types', 'tickets.ticket_type_id', 'ticket_types.id')
+      .select(
+        'tickets.*',
+        'events.title as event_title',
+        'events.price as event_price',
+        'events.description as event_description',
+        'events.organizer_id',
+        'explorers.name as explorer_name',
+        'explorers.email as explorer_email',
+        'explorers.cuit_cuil as explorer_cuit_cuil',
+        'ticket_types.name as ticket_type_name',
+        'ticket_types.description as ticket_type_description',
+        'ticket_types.price as ticket_type_price'
+      )
+      .where('tickets.order_id', orderId)
+      .orderBy('tickets.created_at', 'asc');
+  }
+
+  async updateOrderPreference(orderId: string, preferenceId: string): Promise<void> {
+    await this.db('tickets')
+      .where({ order_id: orderId })
+      .update({ mp_preference_id: preferenceId });
+  }
+
+  async markGroupAsPaid(
+    orderId: string,
+    paymentId: string,
+    qrPayloadByTicketId: Record<string, string>
+  ): Promise<TicketEntity[]> {
+    return this.db.transaction(async (trx) => {
+      const pending = await trx('tickets')
+        .where({ order_id: orderId, status: 'PENDING' })
+        .forUpdate();
+
+      const updated: TicketEntity[] = [];
+      for (const ticket of pending) {
+        const qrPayload = qrPayloadByTicketId[ticket.id];
+        if (!qrPayload) continue;
+
+        const [row] = await trx('tickets')
+          .where({ id: ticket.id, status: 'PENDING' })
+          .update({
+            status: 'PAID',
+            mp_payment_id: paymentId,
+            qr_payload: qrPayload
+          })
+          .returning('*');
+
+        if (row) updated.push(row);
+      }
+
+      return updated;
+    });
   }
 
   async findByExplorerId(explorerId: string): Promise<TicketEntity[]> {
@@ -106,17 +170,6 @@ export class TicketRepository {
 
   async delete(id: string): Promise<void> {
     await this.db('tickets').where({ id }).del();
-  }
-
-  async markAsPaid(id: string, data: Partial<TicketEntity>): Promise<TicketEntity | undefined> {
-    const [ticket] = await this.db('tickets')
-      .where({ id, status: 'PENDING' })
-      .update({
-        ...data,
-        status: 'PAID'
-      })
-      .returning('*');
-    return ticket;
   }
 
   async markAsValidated(id: string): Promise<TicketEntity | undefined> {

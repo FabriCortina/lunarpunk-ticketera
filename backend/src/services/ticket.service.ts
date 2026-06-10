@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import db from '../database/connection';
 import { TicketRepository } from '../repositories/ticket.repository';
 import { EventRepository } from '../repositories/event.repository';
@@ -12,7 +13,7 @@ export class TicketService {
     private ticketTypeRepository: TicketTypeRepository
   ) {}
 
-  async reserveTicket(userId: string, eventId: string, ticketTypeId?: string) {
+  async reserveTicket(userId: string, eventId: string, ticketTypeId?: string, quantity: number = 1) {
     return db.transaction(async (trx) => {
       // Lock de la fila del evento: serializa reservas concurrentes y evita
       // que dos requests lean el mismo conteo antes de insertar (TOCTOU).
@@ -26,6 +27,8 @@ export class TicketService {
         throw new AppError('Cannot reserve tickets for unpublished events', 400);
       }
 
+      const orderId = randomUUID();
+
       const ticketTypes = await this.ticketTypeRepository.findByEventId(eventId);
       if (ticketTypes.length > 0) {
         if (!ticketTypeId) {
@@ -38,29 +41,37 @@ export class TicketService {
         }
 
         const soldCount = await this.ticketRepository.countByTicketTypeId(ticketTypeId, trx);
-        if (soldCount >= Number(ticketType.capacity)) {
+        if (soldCount + quantity > Number(ticketType.capacity)) {
           throw new AppError('Ticket type is sold out', 409);
         }
 
-        return this.ticketRepository.create({
-          event_id: eventId,
-          explorer_id: userId,
-          ticket_type_id: ticketTypeId,
-          status: 'PENDING',
-        }, trx);
+        return this.ticketRepository.createMany(
+          Array.from({ length: quantity }, () => ({
+            event_id: eventId,
+            explorer_id: userId,
+            ticket_type_id: ticketTypeId,
+            order_id: orderId,
+            status: 'PENDING' as const,
+          })),
+          trx
+        );
       }
 
       const soldCount = await this.ticketRepository.countByEventId(eventId, trx);
-      if (soldCount >= Number(event.capacity)) {
+      if (soldCount + quantity > Number(event.capacity)) {
         throw new AppError('Event is sold out', 409);
       }
 
       // El QR Payload inicial es null hasta que se pague
-      return this.ticketRepository.create({
-        event_id: eventId,
-        explorer_id: userId,
-        status: 'PENDING',
-      }, trx);
+      return this.ticketRepository.createMany(
+        Array.from({ length: quantity }, () => ({
+          event_id: eventId,
+          explorer_id: userId,
+          order_id: orderId,
+          status: 'PENDING' as const,
+        })),
+        trx
+      );
     });
   }
 

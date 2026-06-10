@@ -42,6 +42,7 @@ export enum TicketStatus {
 
 export interface Ticket {
   id: string;
+  orderId: string;
   eventId: string;
   explorerId: string; // Reference to EXPLORER user (renamed from buyerId)
   status: TicketStatus; // Renamed from paymentStatus

@@ -6,8 +6,8 @@ export class PaymentController {
   constructor(private paymentService: PaymentService) {}
 
   createPreference = async (req: FastifyRequest, reply: FastifyReply) => {
-    const { ticketId } = req.body as CreatePreferenceInput;
-    const result = await this.paymentService.createPreference(req.user!.id, ticketId);
+    const { orderId } = req.body as CreatePreferenceInput;
+    const result = await this.paymentService.createPreference(req.user!.id, orderId);
     return reply.status(201).send(result);
   };
 

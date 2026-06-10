@@ -4,7 +4,7 @@ import { Button } from './Button';
 import { BrandLogo } from './BrandLogo';
 import { ticketsService } from '../services/ticketsService';
 import { paymentsService } from '../services/paymentsService';
-import { QrCode, Calendar, MapPin, Clock, CheckCircle, Ban, CheckCheck, Ticket as TicketIcon, AlertCircle, RefreshCcw, CreditCard, AlertTriangle, Hourglass, Lock, X } from 'lucide-react';
+import { QrCode, Calendar, MapPin, Clock, CheckCircle, Ban, CheckCheck, Ticket as TicketIcon, AlertCircle, RefreshCcw, CreditCard, AlertTriangle, Hourglass, Lock, X, Share2 } from 'lucide-react';
 
 interface ExplorerTicketListProps {
   tickets: Ticket[];
@@ -23,6 +23,7 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
   const [checkoutLoadingId, setCheckoutLoadingId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [retryEnabledIds, setRetryEnabledIds] = useState<Set<string>>(new Set());
+  const [shareFeedbackId, setShareFeedbackId] = useState<string | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -129,6 +130,24 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
     });
   }, [tickets, userId, now]); // Recalculate when time changes
 
+  // Para compras de varios tickets (mismo orderId), mostramos un único botón
+  // de "Completar Pago" en el primer ticket pendiente del grupo.
+  const orderGroupInfo = useMemo(() => {
+    const sizes = new Map<string, number>();
+    const leaders = new Map<string, string>();
+
+    sortedTickets
+      .filter((t) => t.status === TicketStatus.PENDING)
+      .forEach((t) => {
+        sizes.set(t.orderId, (sizes.get(t.orderId) ?? 0) + 1);
+        if (!leaders.has(t.orderId)) {
+          leaders.set(t.orderId, t.id);
+        }
+      });
+
+    return { sizes, leaders };
+  }, [sortedTickets]);
+
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -187,7 +206,26 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
 
   const getQrPayload = (ticket: Ticket) => ticket.qrPayload ?? qrPayloads[ticket.id] ?? null;
 
-  const renderQrSection = (ticket: Ticket, isExpired: boolean) => {
+  const handleShareQr = async (ticket: Ticket, qrUrl: string, eventTitle: string) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Ticket - ${eventTitle}`, text: `Mi entrada para ${eventTitle}`, url: qrUrl });
+      } catch {
+        // Usuario canceló el share, no hacer nada
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(qrUrl);
+      setShareFeedbackId(ticket.id);
+      setTimeout(() => setShareFeedbackId((current) => (current === ticket.id ? null : current)), 2000);
+    } catch {
+      // Clipboard no disponible
+    }
+  };
+
+  const renderQrSection = (ticket: Ticket, isExpired: boolean, eventTitle: string) => {
     if (isExpired && ticket.status === TicketStatus.PENDING) {
         return (
              <div className="flex flex-col items-center gap-2 opacity-50 font-body">
@@ -217,6 +255,16 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
                  <span className="text-[10px] text-slate-500 uppercase tracking-widest text-center mt-2">
                    {qrUrl ? 'Presentá este QR en el acceso' : 'Generando QR...'}
                  </span>
+                 {qrUrl && (
+                   <button
+                     type="button"
+                     onClick={() => handleShareQr(ticket, qrUrl, eventTitle)}
+                     className="mt-2 flex items-center gap-1 text-[10px] text-lp-accent hover:text-white uppercase tracking-widest transition-colors"
+                   >
+                     <Share2 size={12} />
+                     {shareFeedbackId === ticket.id ? 'Copiado!' : 'Compartir'}
+                   </button>
+                 )}
                 </div>
             );
         case TicketStatus.PENDING:
@@ -289,6 +337,9 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
           const isExpiredForUI = isExpired && !canRetry;
 
           const canDelete = ticket.status === TicketStatus.PENDING || ticket.status === TicketStatus.CANCELED;
+
+          const groupSize = orderGroupInfo.sizes.get(ticket.orderId) ?? 1;
+          const isGroupLeader = orderGroupInfo.leaders.get(ticket.orderId) === ticket.id;
 
           return (
             <div 
@@ -366,20 +417,24 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
                 {/* Pending Actions */}
               {ticket.status === TicketStatus.PENDING && (
                   <div className="mt-4 pt-4 border-t border-white/5 flex gap-3 flex-col sm:flex-row items-start sm:items-center">
-                     {isExpiredForUI ? (
+                     {!isGroupLeader ? (
+                        <p className="text-xs text-slate-400 flex-1 flex items-center font-body">
+                           <CreditCard size={12} className="mr-1" /> Incluido en una compra de {groupSize} tickets.
+                        </p>
+                     ) : isExpiredForUI ? (
                         <>
                            <p className="text-xs text-lp-error flex-1 flex items-center font-body">
                               <AlertCircle size={12} className="mr-1" /> Reserva expirada. Si aún quieres asistir, intenta nuevamente.
                            </p>
-                           <Button 
-                              variant="ghost" 
-                              isLoading={checkoutLoadingId === ticket.id}
+                           <Button
+                              variant="ghost"
+                              isLoading={checkoutLoadingId === ticket.orderId}
                               onClick={async () => {
                                 setRetryEnabledIds(prev => new Set(prev).add(ticket.id));
                                 setCheckoutError(null);
-                                setCheckoutLoadingId(ticket.id);
+                                setCheckoutLoadingId(ticket.orderId);
                                 try {
-                                  const response = await paymentsService.createPreference(ticket.id);
+                                  const response = await paymentsService.createPreference(ticket.orderId);
                                   window.location.href = response.init_point;
                                 } catch (error: any) {
                                   setCheckoutError(error?.message || 'No se pudo iniciar el pago.');
@@ -401,15 +456,15 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
                                </p>
                              )}
                           </div>
-                          <Button 
-                            variant="primary" 
+                          <Button
+                            variant="primary"
                             className={`w-full sm:w-auto text-xs !py-2 text-black shadow-none font-body ${isWarning ? 'bg-lp-error hover:bg-red-400' : 'bg-lp-warning hover:bg-yellow-300'}`}
-                            isLoading={checkoutLoadingId === ticket.id}
+                            isLoading={checkoutLoadingId === ticket.orderId}
                             onClick={async () => {
                               setCheckoutError(null);
-                              setCheckoutLoadingId(ticket.id);
+                              setCheckoutLoadingId(ticket.orderId);
                               try {
-                                const response = await paymentsService.createPreference(ticket.id);
+                                const response = await paymentsService.createPreference(ticket.orderId);
                                 window.location.href = response.init_point;
                               } catch (error: any) {
                                 setCheckoutError(error?.message || 'No se pudo iniciar el pago.');
@@ -418,7 +473,7 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
                               }
                             }}
                           >
-                            <CreditCard size={14} /> Completar Pago
+                            <CreditCard size={14} /> Completar Pago{groupSize > 1 ? ` (${groupSize} tickets)` : ''}
                           </Button>
                         </>
                      )}
@@ -431,7 +486,7 @@ export const ExplorerTicketList: React.FC<ExplorerTicketListProps> = ({ tickets,
 
               {/* Right: QR & Action */}
               <div className={`p-6 md:w-48 bg-slate-900/50 flex flex-col items-center justify-center gap-3 border-l border-white/5 ${isExpiredForUI && ticket.status === TicketStatus.PENDING ? 'pointer-events-none' : ''}`}>
-                 {renderQrSection(ticket, isExpiredForUI)}
+                 {renderQrSection(ticket, isExpiredForUI, event.title)}
               </div>
             </div>
           );

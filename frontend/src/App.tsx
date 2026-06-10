@@ -483,7 +483,7 @@ const App: React.FC = () => {
 
   // --- EXPLORER ACTIONS (STRICT) ---
 
-  const handleBuyTicket = async (event: Event, ticketTypeId?: string) => {
+  const handleBuyTicket = async (event: Event, ticketTypeId?: string, quantity: number = 1) => {
     if (!user) return;
     
     if (user.role !== UserRole.EXPLORER) {
@@ -504,32 +504,32 @@ const App: React.FC = () => {
 
     if (targetEvent.availableTickets > 0) {
       try {
-        const newTicket = await ticketsService.reserveTicket(targetEvent.id, ticketTypeId);
+        const newTickets = await ticketsService.reserveTicket(targetEvent.id, ticketTypeId, quantity);
         const selectedType = targetEvent.ticketTypes?.find((type) => type.id === ticketTypeId);
-        const hydratedTicket = {
+        const hydratedTickets = newTickets.map((newTicket) => ({
           ...newTicket,
           ticketTypeName: newTicket.ticketTypeName ?? selectedType?.name ?? null,
           ticketTypeDescription: newTicket.ticketTypeDescription ?? selectedType?.description ?? null,
           ticketTypePrice: newTicket.ticketTypePrice ?? selectedType?.price ?? null
-        };
-        setTickets([hydratedTicket, ...tickets]);
-        
-        setEvents(events.map(e => 
-          e.id === targetEvent.id 
+        }));
+        setTickets([...hydratedTickets, ...tickets]);
+
+        setEvents(events.map(e =>
+          e.id === targetEvent.id
             ? {
                 ...e,
-                availableTickets: Math.max(e.availableTickets - 1, 0),
+                availableTickets: Math.max(e.availableTickets - hydratedTickets.length, 0),
                 ticketTypes: e.ticketTypes?.map((type) =>
                   type.id === ticketTypeId
-                    ? { ...type, available: Math.max(type.available - 1, 0) }
+                    ? { ...type, available: Math.max(type.available - hydratedTickets.length, 0) }
                     : type
                 )
               }
             : e
         ));
 
-        setNotification(`¡Ticket reservado para ${targetEvent.title}! Revisa "Mis Tickets".`);
-        setExplorerView('tickets'); 
+        setNotification(`¡${hydratedTickets.length > 1 ? `${hydratedTickets.length} tickets reservados` : 'Ticket reservado'} para ${targetEvent.title}! Revisa "Mis Tickets".`);
+        setExplorerView('tickets');
       } catch (error: any) {
         setNotification(error?.message || 'No se pudo reservar el ticket.');
       }

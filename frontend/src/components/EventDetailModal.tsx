@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Event } from '../types';
 import { Button } from './Button';
-import { X, Calendar, MapPin, Info } from 'lucide-react';
+import { X, Calendar, MapPin, Info, Minus, Plus } from 'lucide-react';
+
+const MAX_QUANTITY_PER_PURCHASE = 10;
 
 interface EventDetailModalProps {
   event: Event;
   onClose: () => void;
-  onBuy: (event: Event, ticketTypeId?: string) => void;
+  onBuy: (event: Event, ticketTypeId?: string, quantity?: number) => void;
   onSelectType?: (eventId: string, ticketTypeName: string) => void;
 }
 
@@ -27,12 +29,18 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     [ticketTypes, selectedTypeId]
   );
   const remaining = selectedType?.available ?? event.availableTickets;
+  const maxQuantity = Math.max(Math.min(remaining, MAX_QUANTITY_PER_PURCHASE), 0);
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     if (selectedType?.name) {
       onSelectType?.(event.id, selectedType.name);
     }
   }, [event.id, onSelectType, selectedType?.name]);
+
+  useEffect(() => {
+    setQuantity((q) => Math.min(Math.max(q, 1), Math.max(maxQuantity, 1)));
+  }, [maxQuantity]);
 
   return (
     <div
@@ -137,16 +145,41 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
               </div>
             )}
 
+            {remaining > 0 && (
+              <div className="flex items-center justify-center gap-4">
+                <span className="text-slate-400 text-xs uppercase tracking-wider font-body">Cantidad</span>
+                <div className="flex items-center gap-3 bg-slate-800/50 border border-white/10 rounded-full px-3 py-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.max(q - 1, 1))}
+                    disabled={quantity <= 1}
+                    className="text-slate-300 hover:text-lp-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span className="text-white font-body font-bold w-6 text-center">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.min(q + 1, maxQuantity))}
+                    disabled={quantity >= maxQuantity}
+                    className="text-slate-300 hover:text-lp-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-center">
-               <Button 
+               <Button
                   onClick={() => {
-                     onBuy(event, selectedTypeId);
+                     onBuy(event, selectedTypeId, quantity);
                      onClose();
                   }}
                   disabled={remaining === 0}
                   className="w-full md:w-auto px-10 py-3 text-base font-body"
                >
-                  {remaining === 0 ? "Sold Out" : "Comprar Ticket (Reservar)"}
+                  {remaining === 0 ? "Sold Out" : `Comprar ${quantity > 1 ? `${quantity} Tickets` : 'Ticket'} (Reservar)`}
                </Button>
             </div>
           </div>

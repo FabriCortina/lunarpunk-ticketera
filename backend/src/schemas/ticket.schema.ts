@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const reserveTicketSchema = z.object({
   eventId: z.string().uuid(),
   ticketTypeId: z.string().uuid().optional(),
+  quantity: z.number().int().min(1).max(10).optional().default(1),
 });
 
 export const getEventTicketsSchema = z.object({

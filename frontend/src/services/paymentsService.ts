@@ -6,9 +6,9 @@ type CreatePreferenceApiResponse = {
 };
 
 export const paymentsService = {
-  createPreference: async (ticketId: string): Promise<{ init_point: string }> => {
+  createPreference: async (orderId: string): Promise<{ init_point: string }> => {
     try {
-      const response = await post<CreatePreferenceApiResponse>('/api/payments/create-preference', { ticketId });
+      const response = await post<CreatePreferenceApiResponse>('/api/payments/create-preference', { orderId });
       const isProd = import.meta.env.MODE === 'production';
       const url = isProd
         ? (response.init_point || response.sandbox_init_point)
@@ -26,7 +26,7 @@ export const paymentsService = {
   }
 };
 
-export const startCheckout = async (ticketId: string) => {
-  const { init_point } = await paymentsService.createPreference(ticketId);
+export const startCheckout = async (orderId: string) => {
+  const { init_point } = await paymentsService.createPreference(orderId);
   window.location.href = init_point;
 };

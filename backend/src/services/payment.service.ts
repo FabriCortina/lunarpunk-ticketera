@@ -13,18 +13,20 @@ export class PaymentService {
     this.mpClient = new MercadoPagoConfig({ accessToken: env.MP_ACCESS_TOKEN });
   }
 
-  async createPreference(userId: string, ticketId: string) {
-    const ticket = await this.ticketRepository.findByIdWithEvent(ticketId);
+  async createPreference(userId: string, orderId: string) {
+    const tickets = await this.ticketRepository.findByOrderId(orderId);
 
-    if (!ticket) {
+    if (tickets.length === 0) {
       throw new AppError('Ticket not found', 404);
     }
+
+    const [ticket] = tickets;
 
     if (ticket.explorer_id !== userId) {
       throw new AppError('Forbidden: This ticket does not belong to you', 403);
     }
 
-    if (ticket.status !== 'PENDING') {
+    if (tickets.some((t) => t.status !== 'PENDING')) {
       throw new AppError(`Cannot pay for ticket in status ${ticket.status}`, 400);
     }
 
@@ -46,15 +48,15 @@ export class PaymentService {
             {
               id: ticket.event_id,
               title: itemTitle,
-              quantity: 1,
+              quantity: tickets.length,
               unit_price: Number(unitPrice),
               currency_id: 'ARS',
               description: itemDescription?.substring(0, 200)
             }
           ],
-          external_reference: ticket.id,
+          external_reference: orderId,
           payer: {
-             // email: user.email 
+             // email: user.email
           },
           back_urls: {
             success: `${backUrl}?status=success`,
@@ -64,7 +66,7 @@ export class PaymentService {
           ...(autoReturn ? { auto_return: autoReturn } : {}),
           notification_url: notificationUrl,
           metadata: {
-            ticket_id: ticket.id,
+            order_id: orderId,
             explorer_id: userId
           }
         }
@@ -74,9 +76,7 @@ export class PaymentService {
         throw new Error('Failed to create preference with MercadoPago');
       }
 
-      await this.ticketRepository.update(ticket.id, {
-        mp_preference_id: result.id
-      });
+      await this.ticketRepository.updateOrderPreference(orderId, result.id);
 
       return {
         init_point: result.init_point,
@@ -104,7 +104,7 @@ export class PaymentService {
 
     const signature = verifyMercadoPagoSignature(headers, String(id));
     if (!signature.ok) {
-      logger?.warn({ reason: signature.reason, requestId: signature.requestId }, 'Invalid MP webhook signature');
+      logger?.warn(`Invalid MP webhook signature: ${signature.reason} (requestId: ${signature.requestId})`);
       throw new AppError('Invalid webhook signature', 401);
     }
 
@@ -116,8 +116,8 @@ export class PaymentService {
       const payment = new Payment(this.mpClient);
       const paymentInfo = await payment.get({ id: id });
 
-      const ticketId = paymentInfo.external_reference;
-      if (!ticketId) {
+      const orderId = paymentInfo.external_reference;
+      if (!orderId) {
         logger?.warn({ paymentId: id }, 'Payment missing external_reference');
         return;
       }
@@ -127,56 +127,60 @@ export class PaymentService {
         return;
       }
 
-      const ticket = await this.ticketRepository.findByIdWithEvent(ticketId);
-      if (!ticket) {
-        logger?.warn({ ticketId, paymentId: id }, 'Ticket not found for payment');
+      const tickets = await this.ticketRepository.findByOrderId(orderId);
+      if (tickets.length === 0) {
+        logger?.warn({ orderId, paymentId: id }, 'Order not found for payment');
         return;
       }
 
-      if (ticket.mp_payment_id && ticket.mp_payment_id !== String(id)) {
-        logger?.warn({ ticketId, paymentId: id }, 'Ticket already linked to another payment');
+      const [ticket] = tickets;
+
+      if (tickets.some((t) => t.mp_payment_id && t.mp_payment_id !== String(id))) {
+        logger?.warn({ orderId, paymentId: id }, 'Order already linked to another payment');
         return;
       }
 
-      if (ticket.status === 'PAID') {
-        logger?.info({ ticketId, paymentId: id }, 'Ticket already PAID');
+      if (tickets.every((t) => t.status === 'PAID')) {
+        logger?.info({ orderId, paymentId: id }, 'Order already PAID');
         return;
       }
 
-      const expectedAmount = Number(ticket.ticket_type_price ?? ticket.event_price);
+      const unitPrice = Number(ticket.ticket_type_price ?? ticket.event_price);
+      const expectedAmount = unitPrice * tickets.length;
       const receivedAmount = Number(paymentInfo.transaction_amount);
       if (!Number.isFinite(receivedAmount) || Math.abs(receivedAmount - expectedAmount) > 0.01) {
-        logger?.warn({ ticketId, paymentId: id, expectedAmount, receivedAmount }, 'Payment amount mismatch');
+        logger?.warn({ orderId, paymentId: id, expectedAmount, receivedAmount }, 'Payment amount mismatch');
         return;
       }
 
       if (paymentInfo.currency_id && paymentInfo.currency_id !== 'ARS') {
-        logger?.warn({ ticketId, paymentId: id, currency: paymentInfo.currency_id }, 'Payment currency mismatch');
+        logger?.warn({ orderId, paymentId: id, currency: paymentInfo.currency_id }, 'Payment currency mismatch');
         return;
       }
 
-      if (paymentInfo.metadata?.ticket_id && paymentInfo.metadata.ticket_id !== ticketId) {
-        logger?.warn({ ticketId, paymentId: id }, 'Payment metadata ticket_id mismatch');
+      if (paymentInfo.metadata?.order_id && paymentInfo.metadata.order_id !== orderId) {
+        logger?.warn({ orderId, paymentId: id }, 'Payment metadata order_id mismatch');
         return;
       }
 
       if (paymentInfo.metadata?.explorer_id && paymentInfo.metadata.explorer_id !== ticket.explorer_id) {
-        logger?.warn({ ticketId, paymentId: id }, 'Payment metadata explorer_id mismatch');
+        logger?.warn({ orderId, paymentId: id }, 'Payment metadata explorer_id mismatch');
         return;
       }
 
-      const qrPayload = generateSignedQrPayload(ticketId, ticket.event_id);
-      const updated = await this.ticketRepository.markAsPaid(ticketId, {
-        mp_payment_id: String(id),
-        qr_payload: qrPayload
-      });
+      const qrPayloadByTicketId: Record<string, string> = {};
+      for (const t of tickets) {
+        qrPayloadByTicketId[t.id] = generateSignedQrPayload(t.id, t.event_id);
+      }
 
-      if (!updated) {
-        logger?.info({ ticketId, paymentId: id }, 'Ticket already updated by another process');
+      const updated = await this.ticketRepository.markGroupAsPaid(orderId, String(id), qrPayloadByTicketId);
+
+      if (updated.length === 0) {
+        logger?.info({ orderId, paymentId: id }, 'Order already updated by another process');
         return;
       }
 
-      logger?.info({ ticketId, paymentId: id }, 'Ticket updated to PAID');
+      logger?.info({ orderId, paymentId: id, count: updated.length }, 'Order updated to PAID');
     } catch (error) {
       logger?.error({ err: error, paymentId: id }, 'Error processing MP webhook');
     }

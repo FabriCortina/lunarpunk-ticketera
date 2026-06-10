@@ -6,7 +6,7 @@ import { Search, Map } from 'lucide-react';
 
 interface BuyerPanelProps {
   events: Event[];
-  onBuyTicket: (event: Event, ticketTypeId?: string) => void;
+  onBuyTicket: (event: Event, ticketTypeId?: string, quantity?: number) => void;
 }
 
 export const BuyerPanel: React.FC<BuyerPanelProps> = ({ events, onBuyTicket }) => {
