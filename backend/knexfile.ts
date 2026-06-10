@@ -3,14 +3,16 @@ import { env } from './src/config/env';
 import path from 'path';
 import fs from 'fs';
 
-const isProduction = env.NODE_ENV === 'production';
-const distMigrations = path.join(__dirname, 'dist', 'src', 'database', 'migrations');
-const srcMigrations = path.join(__dirname, 'src', 'database', 'migrations');
-const hasSrcMigrations = fs.existsSync(
-  path.join(srcMigrations, '20240101000001_create_core_tables.ts')
-);
+// When running compiled knexfile from backend/dist/, __dirname is backend/dist.
+const backendRoot = path.basename(__dirname) === 'dist'
+  ? path.join(__dirname, '..')
+  : __dirname;
+
+const distMigrations = path.join(backendRoot, 'dist', 'src', 'database', 'migrations');
+const srcMigrations = path.join(backendRoot, 'src', 'database', 'migrations');
+const compiledMarker = path.join(distMigrations, '20240101000001_create_core_tables.js');
 const migrationDir =
-  isProduction && fs.existsSync(distMigrations) && !hasSrcMigrations
+  env.NODE_ENV === 'production' && fs.existsSync(compiledMarker)
     ? distMigrations
     : srcMigrations;
 

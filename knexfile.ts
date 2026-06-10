@@ -3,14 +3,13 @@ import { env } from './backend/src/config/env';
 import path from 'path';
 import fs from 'fs';
 
-// Determinar si estamos ejecutando desde 'dist' (js) o 'src' (ts) para las migraciones
 const distMigrations = path.join(__dirname, 'backend', 'dist', 'src', 'database', 'migrations');
 const srcMigrations = path.join(__dirname, 'backend', 'src', 'database', 'migrations');
-const hasSrcMigrations = fs.existsSync(
-  path.join(srcMigrations, '20240101000001_create_core_tables.ts')
-);
-const useDist = env.NODE_ENV === 'production' && fs.existsSync(distMigrations) && !hasSrcMigrations;
-const migrationDir = useDist ? distMigrations : srcMigrations;
+const compiledMarker = path.join(distMigrations, '20240101000001_create_core_tables.js');
+const migrationDir =
+  env.NODE_ENV === 'production' && fs.existsSync(compiledMarker)
+    ? distMigrations
+    : srcMigrations;
 
 const config: Knex.Config = {
   client: 'pg',
