@@ -25,6 +25,11 @@ const envSchema = z.object({
   MP_WEBHOOK_TOLERANCE_SECONDS: z.coerce.number().int().min(30).default(300),
   API_KEY: z.string().optional(),
   ADMIN_BOOTSTRAP_SECRET: z.string().optional(),
+
+  // Email (Resend) - Recuperación de contraseña
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default('LunarPunk <onboarding@resend.dev>'),
+  PASSWORD_RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().min(5).default(60),
   
   // App Config
   BACKEND_PUBLIC_BASE_URL: z.string().url().default('http://localhost:3100'),
@@ -66,6 +71,10 @@ if (data.NODE_ENV === 'production') {
 
 if (data.NODE_ENV === 'production' && !data.MP_WEBHOOK_SECRET) {
   console.warn('⚠️ MP_WEBHOOK_SECRET is not configured; webhook verification is disabled.');
+}
+
+if (data.NODE_ENV === 'production' && !data.RESEND_API_KEY) {
+  console.warn('⚠️ RESEND_API_KEY is not configured; password reset emails will not be sent.');
 }
 
 if (!data.DATABASE_URL && (!data.DB_HOST || !data.DB_USER || !data.DB_NAME)) {

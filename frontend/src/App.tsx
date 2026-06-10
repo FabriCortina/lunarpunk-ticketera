@@ -7,6 +7,7 @@ import { ExplorerTicketList } from './components/ExplorerTicketList';
 import { TicketWallet } from './components/TicketWallet'; 
 import { ProfileModal } from './components/ProfileModal';
 import { AuthScreen } from './components/AuthScreen';
+import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { TermsModal } from './components/TermsModal';
 import { Button } from './components/Button';
 import { BrandLogo } from './components/BrandLogo';
@@ -25,6 +26,7 @@ import { Ticket as TicketIcon, Sparkles, LogOut, ShieldCheck, Map, Database, Ale
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [resetPasswordToken, setResetPasswordToken] = useState<string | null>(null);
   
   const [events, setEvents] = useState<Event[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -99,6 +101,15 @@ const App: React.FC = () => {
     };
 
     loadSession();
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('reset_token');
+    if (token) {
+      setResetPasswordToken(token);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
 
   useEffect(() => {
@@ -545,6 +556,15 @@ const App: React.FC = () => {
   }
 
   if (!user) {
+    if (resetPasswordToken) {
+      return (
+        <>
+          <MoonCursor />
+          <ResetPasswordScreen token={resetPasswordToken} onDone={() => setResetPasswordToken(null)} />
+        </>
+      );
+    }
+
     return (
       <>
         <MoonCursor />

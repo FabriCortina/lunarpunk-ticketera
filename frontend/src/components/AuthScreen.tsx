@@ -3,7 +3,7 @@ import { Button } from './Button';
 import { BrandLogo } from './BrandLogo';
 import { authService } from '../services/authService';
 import { User, UserRole } from '../types';
-import { UserPlus, LogIn, AlertCircle, Map, Database, User as UserIcon } from 'lucide-react';
+import { UserPlus, LogIn, AlertCircle, Map, Database, User as UserIcon, CheckCircle, ArrowLeft } from 'lucide-react';
 
 interface AuthScreenProps {
   onAuthSuccess: (user: User) => void;
@@ -12,10 +12,13 @@ interface AuthScreenProps {
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onOpenTerms }) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -28,6 +31,25 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onOpenTer
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError(null);
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setForgotMessage(null);
+
+    try {
+      if (!forgotEmail) {
+        throw new Error('Por favor ingresa tu email.');
+      }
+      const response = await authService.forgotPassword(forgotEmail);
+      setForgotMessage(response.message);
+    } catch (err: any) {
+      setError(err.message || 'No se pudo procesar la solicitud.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,6 +124,61 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onOpenTer
           </div>
         )}
 
+        {isForgotPassword ? (
+          forgotMessage ? (
+            <div className="text-center space-y-5">
+              <div className="p-3 bg-lp-success/10 border border-lp-success/30 rounded flex items-center gap-2 text-lp-success text-sm font-body text-left">
+                <CheckCircle size={16} className="shrink-0" />
+                {forgotMessage}
+              </div>
+              <button
+                onClick={() => {
+                  setIsForgotPassword(false);
+                  setForgotMessage(null);
+                  setError(null);
+                }}
+                className="text-lp-accent hover:text-white font-bold text-sm uppercase tracking-wider transition-colors font-body flex items-center gap-2 justify-center w-full"
+              >
+                <ArrowLeft size={16} /> Volver al inicio de sesión
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-5">
+              <p className="text-sm text-slate-400 font-body">
+                Ingresá el email de tu cuenta y te enviaremos un enlace para restablecer tu contraseña.
+              </p>
+              <div className="space-y-1">
+                <label className="text-xs uppercase tracking-wider text-lp-muted ml-1 font-body">Correo Electrónico</label>
+                <input
+                  type="email"
+                  name="forgotEmail"
+                  value={forgotEmail}
+                  onChange={(e) => {
+                    setForgotEmail(e.target.value);
+                    setError(null);
+                  }}
+                  className="w-full bg-lp-surface border border-lp-border rounded p-3 text-white focus:border-lp-accent focus:outline-none transition-all placeholder:text-gray-600 font-body"
+                  placeholder="user@lunar.net"
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full py-3 mt-4" isLoading={loading}>
+                Enviar enlace de recuperación
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotPassword(false);
+                  setError(null);
+                }}
+                className="text-lp-accent hover:text-white font-bold text-sm uppercase tracking-wider transition-colors font-body flex items-center gap-2 justify-center w-full"
+              >
+                <ArrowLeft size={16} /> Volver al inicio de sesión
+              </button>
+            </form>
+          )
+        ) : (
+        <>
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isLogin && (
             <>
@@ -206,6 +283,22 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onOpenTer
               placeholder="••••••••"
               required
             />
+            {isLogin && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(true);
+                    setError(null);
+                    setForgotMessage(null);
+                    setForgotEmail(formData.email);
+                  }}
+                  className="text-xs text-lp-accent hover:text-white font-body mt-1"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+            )}
           </div>
 
           {!isLogin && (
@@ -260,6 +353,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onOpenTer
             {isLogin ? "SUMATE!" : "Acceder a la Comunidad"}
           </button>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

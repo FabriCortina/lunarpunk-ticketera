@@ -54,3 +54,8 @@ export const verifyQrPayload = (payloadString: string): QrPayload | null => {
     return null;
   }
 };
+
+export const generatePasswordResetToken = () => crypto.randomBytes(32).toString('hex');
+
+export const hashPasswordResetToken = (token: string) =>
+  crypto.createHash('sha256').update(token).digest('hex');
